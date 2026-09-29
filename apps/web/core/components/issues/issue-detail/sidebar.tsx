@@ -149,6 +149,7 @@ export const IssueDetailsSidebar = observer(function IssueDetailsSidebar(props: 
                 onChange={(val) =>
                   issueOperations.update(workspaceSlug, projectId, issueId, {
                     start_date: val ? renderFormattedPayloadDate(val) : null,
+                    ...(!val || renderFormattedPayloadDate(val) !== issue.start_date ? { start_time: null } : {}),
                   })
                 }
                 maxDate={maxDate ?? undefined}
@@ -182,6 +183,7 @@ export const IssueDetailsSidebar = observer(function IssueDetailsSidebar(props: 
                   onChange={(val) =>
                     issueOperations.update(workspaceSlug, projectId, issueId, {
                       target_date: val ? renderFormattedPayloadDate(val) : null,
+                      ...(!val || renderFormattedPayloadDate(val) !== issue.target_date ? { target_time: null } : {}),
                     })
                   }
                   minDate={minDate ?? undefined}
