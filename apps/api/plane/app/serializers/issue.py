@@ -13,6 +13,7 @@ from rest_framework import serializers
 
 # Module imports
 from .base import BaseSerializer, DynamicBaseSerializer
+from .issue_schedule import validate_optional_issue_schedule
 from .user import UserLiteSerializer
 from .state import StateLiteSerializer
 from .project import ProjectLiteSerializer
@@ -125,25 +126,7 @@ class IssueCreateSerializer(BaseSerializer):
         allow_triage = self.context.get("allow_triage_state", False)
         state_manager = State.triage_objects if allow_triage else State.objects
 
-        # Date-only edits clear stale instants; unrelated PATCHes preserve them.
-        schedule = {}
-        for date_field, time_field in (("start_date", "start_time"), ("target_date", "target_time")):
-            old_date = getattr(self.instance, date_field, None)
-            day = attrs.get(date_field, old_date)
-            if date_field in attrs and (day is None or day != old_date) and time_field not in attrs:
-                attrs[time_field] = None
-            instant = attrs.get(time_field, getattr(self.instance, time_field, None))
-            if instant is not None and day is None:
-                raise serializers.ValidationError({time_field: "Set a date before adding a time."})
-            schedule[date_field] = day
-            schedule[time_field] = instant
-
-        if schedule["start_time"] is not None and schedule["target_time"] is not None:
-            if schedule["start_time"] > schedule["target_time"]:
-                raise serializers.ValidationError({"target_time": "End time cannot precede start time."})
-        elif schedule["start_date"] is not None and schedule["target_date"] is not None:
-            if schedule["start_date"] > schedule["target_date"]:
-                raise serializers.ValidationError("Start date cannot exceed target date")
+        validate_optional_issue_schedule(attrs, self.instance)
 
         # Validate description content for security
         if "description_html" in attrs and attrs["description_html"]:

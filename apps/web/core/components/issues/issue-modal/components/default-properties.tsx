@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { observer } from "mobx-react";
 import type { Control } from "react-hook-form";
-import { Controller } from "react-hook-form";
+import { Controller, useFormContext } from "react-hook-form";
 import { ETabIndices, EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
 import { ParentPropertyIcon } from "@plane/propel/icons";
@@ -69,6 +69,7 @@ export const IssueDefaultProperties = observer(function IssueDefaultProperties(p
   const { getProjectById } = useProject();
   const { isMobile } = usePlatformOS();
   const { allowPermissions } = useUserPermissions();
+  const { setValue } = useFormContext<TIssue>();
   // derived values
   const projectDetails = getProjectById(projectId);
 
@@ -168,7 +169,9 @@ export const IssueDefaultProperties = observer(function IssueDefaultProperties(p
             <DateDropdown
               value={value}
               onChange={(date) => {
-                onChange(date ? renderFormattedPayloadDate(date) : null);
+                const nextDate = date ? renderFormattedPayloadDate(date) : null;
+                if (nextDate !== value) setValue("start_time", null, { shouldDirty: true, shouldValidate: true });
+                onChange(nextDate);
                 handleFormChange();
               }}
               buttonVariant="border-with-text"
@@ -187,7 +190,9 @@ export const IssueDefaultProperties = observer(function IssueDefaultProperties(p
             <DateDropdown
               value={value}
               onChange={(date) => {
-                onChange(date ? renderFormattedPayloadDate(date) : null);
+                const nextDate = date ? renderFormattedPayloadDate(date) : null;
+                if (nextDate !== value) setValue("target_time", null, { shouldDirty: true, shouldValidate: true });
+                onChange(nextDate);
                 handleFormChange();
               }}
               buttonVariant="border-with-text"

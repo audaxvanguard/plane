@@ -35,6 +35,8 @@ import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useMember } from "@/hooks/store/use-member";
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
+import { useUser } from "@/hooks/store/user";
+import { OptionalIssueTime } from "../issue-detail/optional-time";
 // plane web components
 import { IssueParentSelectRoot } from "@/components/issues/parent-select-root";
 import type { TIssueOperations } from "../issue-detail";
@@ -55,6 +57,8 @@ export const PeekOverviewProperties = observer(function PeekOverviewProperties(p
   const { t } = useTranslation();
   // store hooks
   const { getProjectById } = useProject();
+  const { data: user } = useUser();
+  const timeZone = user?.user_timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
   const {
     issue: { getIssueById },
   } = useIssueDetail();
@@ -140,11 +144,13 @@ export const PeekOverviewProperties = observer(function PeekOverviewProperties(p
         )}
 
         <SidebarPropertyListItem icon={StartDatePropertyIcon} label={t("common.order_by.start_date")}>
+          <div className="w-full space-y-1">
           <DateDropdown
             value={issue.start_date}
             onChange={(val) =>
               issueOperations.update(workspaceSlug, projectId, issueId, {
                 start_date: val ? renderFormattedPayloadDate(val) : null,
+                ...(!val || renderFormattedPayloadDate(val) !== issue.start_date ? { start_time: null } : {}),
               })
             }
             placeholder={t("issue.add.start_date")}
@@ -157,15 +163,28 @@ export const PeekOverviewProperties = observer(function PeekOverviewProperties(p
             hideIcon
             clearIconClassName="h-3 w-3 hidden group-hover:inline"
           />
+          <OptionalIssueTime
+            label="Start time"
+            date={issue.start_date}
+            value={issue.start_time}
+            timeZone={timeZone}
+            disabled={disabled}
+            onSave={(instant, localDate) => issueOperations.update(workspaceSlug, projectId, issueId, {
+              start_time: instant,
+              ...(localDate ? { start_date: localDate } : {}),
+            })}
+          />
+          </div>
         </SidebarPropertyListItem>
 
         <SidebarPropertyListItem icon={DueDatePropertyIcon} label={t("common.order_by.due_date")}>
-          <div className="flex w-full items-center gap-2">
+          <div className="w-full space-y-1">
             <DateDropdown
               value={issue.target_date}
               onChange={(val) =>
                 issueOperations.update(workspaceSlug, projectId, issueId, {
                   target_date: val ? renderFormattedPayloadDate(val) : null,
+                  ...(!val || renderFormattedPayloadDate(val) !== issue.target_date ? { target_time: null } : {}),
                 })
               }
               placeholder={t("issue.add.due_date")}
@@ -180,6 +199,17 @@ export const PeekOverviewProperties = observer(function PeekOverviewProperties(p
               })}
               hideIcon
               clearIconClassName="h-3 w-3 hidden group-hover:inline text-primary"
+            />
+            <OptionalIssueTime
+              label="End time"
+              date={issue.target_date}
+              value={issue.target_time}
+              timeZone={timeZone}
+              disabled={disabled}
+              onSave={(instant, localDate) => issueOperations.update(workspaceSlug, projectId, issueId, {
+                target_time: instant,
+                ...(localDate ? { target_date: localDate } : {}),
+              })}
             />
           </div>
         </SidebarPropertyListItem>

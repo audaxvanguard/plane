@@ -89,6 +89,7 @@ export const IssuePeekOverview = observer(function IssuePeekOverview(props: IWor
                 type: TOAST_TYPE.ERROR,
                 message: t("entity.update.failed", { entity: t("issue.label", { count: 1 }) }),
               });
+              if ("start_time" in data || "target_time" in data) throw _error;
             });
         }
       },

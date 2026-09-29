@@ -5,6 +5,31 @@ from plane.db.models import Issue
 from plane.app.serializers.issue import IssueCreateSerializer, IssueSerializer
 
 
+class OptionalDraftTimesTests(SimpleTestCase):
+    def test_draft_time_is_preserved(self):
+        from plane.db.models import DraftIssue
+        from plane.app.serializers.draft import DraftIssueCreateSerializer
+        serializer = DraftIssueCreateSerializer(DraftIssue(), data={
+            'start_date': '2026-10-01', 'start_time': '2026-10-01T14:30:00-03:00',
+        }, partial=True)
+        serializer.is_valid(raise_exception=True)
+        self.assertEqual(serializer.validated_data['start_time'], datetime(2026, 10, 1, 17, 30, tzinfo=timezone.utc))
+
+    def test_draft_date_clear_removes_time(self):
+        from plane.db.models import DraftIssue
+        from plane.app.serializers.draft import DraftIssueCreateSerializer
+        draft = DraftIssue(start_date=date(2026, 10, 1), start_time=datetime(2026, 10, 1, 12, tzinfo=timezone.utc))
+        serializer = DraftIssueCreateSerializer(draft, data={'start_date': None}, partial=True)
+        serializer.is_valid(raise_exception=True)
+        self.assertIsNone(serializer.validated_data['start_time'])
+
+    def test_draft_read_includes_optional_times(self):
+        from plane.db.models import DraftIssue
+        from plane.app.serializers.draft import DraftIssueSerializer
+        self.assertIn('start_time', DraftIssueSerializer(DraftIssue()).data)
+        self.assertIn('target_time', DraftIssueSerializer(DraftIssue()).data)
+
+
 class OptionalIssueTimesTests(SimpleTestCase):
     def validate_patch(self, instance, data):
         serializer = IssueCreateSerializer(instance, data=data, partial=True)

@@ -134,6 +134,8 @@ class WorkspaceDraftIssueViewSet(BaseViewSet):
                     "priority",
                     "start_date",
                     "target_date",
+                    "start_time",
+                    "target_time",
                     "project_id",
                     "parent_id",
                     "cycle_id",

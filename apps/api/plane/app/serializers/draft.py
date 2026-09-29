@@ -10,6 +10,7 @@ from rest_framework import serializers
 
 # Module imports
 from .base import BaseSerializer
+from .issue_schedule import validate_optional_issue_schedule
 from plane.db.models import (
     User,
     Issue,
@@ -69,12 +70,7 @@ class DraftIssueCreateSerializer(BaseSerializer):
         return data
 
     def validate(self, attrs):
-        if (
-            attrs.get("start_date", None) is not None
-            and attrs.get("target_date", None) is not None
-            and attrs.get("start_date", None) > attrs.get("target_date", None)
-        ):
-            raise serializers.ValidationError("Start date cannot exceed target date")
+        validate_optional_issue_schedule(attrs, self.instance)
 
         # Validate description content for security
         if "description_html" in attrs and attrs["description_html"]:
@@ -318,6 +314,8 @@ class DraftIssueSerializer(BaseSerializer):
             "priority",
             "start_date",
             "target_date",
+            "start_time",
+            "target_time",
             "project_id",
             "parent_id",
             "cycle_id",

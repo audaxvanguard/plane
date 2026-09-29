@@ -14,10 +14,12 @@ old instant, including timeline bulk moves, rather than retaining an inconsisten
 hidden timestamp. Clearing a date clears its time. Issue versions include timestamps,
 and explicit time changes appear in work-item activity history.
 
-This first increment edits/displays times in **work-item details**. Existing list,
-calendar, timeline, date-filter and overdue calculations remain date-based; this
-is not hourly calendar scheduling, timed reminders, or time-based overdue alerts.
-Creation dialogs remain date-only: create the item, then optionally add times.
+Times can be edited in **full work-item details**, the **quick-view panel**, and
+the **creation/update dialog**. In the dialog, select dates first; optional time
+inputs appear below the property buttons and are included in the main Save action.
+Drafts also preserve the optional times. Changing a dialog date clears its old time.
+Existing list, calendar, timeline, date-filter and overdue calculations remain
+date-based; this is not hourly calendar scheduling or timed reminders.
 
 DST gaps are rejected. During a repeated clock hour the converter selects one valid
 occurrence deterministically; choosing between the two occurrences is not exposed
@@ -29,11 +31,20 @@ the unchanged date fields with the extra columns present; rolling back the image
 does not remove or expose saved times. Do not reverse the migration without first
 backing up any new time data.
 
+Migration `0124_draft_optional_times` additionally adds nullable start/end timestamp
+columns to DraftIssue. Work items and drafts share the same schedule validation.
+
 ## Focused tests
 
 ```sh
 node --experimental-strip-types --test deployments/audax/test_optional_times.mjs
+node --test deployments/audax/test_time_surfaces.mjs
 ```
+
+A standalone browser fixture and Playwright interaction test are included as
+`time-controls-fixture.tsx` / `test_time_controls_browser.mjs`. Follow the copy/setup
+instructions in the browser test header; they mount the actual React controls with
+react-hook-form, and never connect to production or use real account data.
 
 Serializer tests are `plane.tests.unit.serializers.test_issue_optional_times`.
 They can run through Django's test runner or unittest in a configured Django shell;

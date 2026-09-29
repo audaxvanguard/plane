@@ -45,6 +45,10 @@ import { useProjectState } from "@/hooks/store/use-project-state";
 import { useWorkspaceDraftIssues } from "@/hooks/store/workspace-draft";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 import { useProjectIssueProperties } from "@/hooks/use-project-issue-properties";
+import { useUser } from "@/hooks/store/user";
+import { IssueFormOptionalTimes } from "./components/optional-times";
+
+const DEFAULT_OPTIONAL_TIMES = { start_time: null, target_time: null };
 
 export interface IssueFormProps {
   data?: Partial<TIssue>;
@@ -110,6 +114,8 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
 
   // store hooks
   const { getProjectById } = useProject();
+  const { data: user } = useUser();
+  const timeZone = user?.user_timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
   const {
     workItemTemplateId,
     isApplyingTemplate,
@@ -133,7 +139,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
 
   // form info
   const methods = useForm<TIssue>({
-    defaultValues: { ...DEFAULT_WORK_ITEM_FORM_VALUES, project_id: defaultProjectId, ...data },
+    defaultValues: { ...DEFAULT_WORK_ITEM_FORM_VALUES, ...DEFAULT_OPTIONAL_TIMES, project_id: defaultProjectId, ...data },
     reValidateMode: "onChange",
   });
   const {
@@ -164,10 +170,14 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
       if (workItemTemplateId) {
         // reset work item template id
         setWorkItemTemplateId(null);
-        reset({ ...DEFAULT_WORK_ITEM_FORM_VALUES, project_id: projectId });
+        reset({ ...DEFAULT_WORK_ITEM_FORM_VALUES, ...DEFAULT_OPTIONAL_TIMES, project_id: projectId });
         editorRef.current?.clearEditor();
       } else {
-        reset(getUpdateFormDataForReset(projectId, getValues()));
+        reset({
+          ...getUpdateFormDataForReset(projectId, getValues()),
+          start_time: getValues("start_time"),
+          target_time: getValues("target_time"),
+        });
       }
     }
     if (projectId && routeProjectId !== projectId) fetchCycles(workspaceSlug?.toString(), projectId);
@@ -178,7 +188,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
   // Reset form when data prop changes
   useEffect(() => {
     if (data) {
-      reset({ ...DEFAULT_WORK_ITEM_FORM_VALUES, project_id: projectId, ...data });
+      reset({ ...DEFAULT_WORK_ITEM_FORM_VALUES, ...DEFAULT_OPTIONAL_TIMES, project_id: projectId, ...data });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...dataResetProperties]);
@@ -254,6 +264,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
         } else {
           reset({
             ...DEFAULT_WORK_ITEM_FORM_VALUES,
+            ...DEFAULT_OPTIONAL_TIMES,
             ...(isCreateMoreToggleEnabled ? { ...data } : {}),
             project_id: getValues<"project_id">("project_id"),
             type_id: getValues<"type_id">("type_id"),
@@ -439,6 +450,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                   handleFormChange={handleFormChange}
                   setSelectedParentIssue={setSelectedParentIssue}
                 />
+                <IssueFormOptionalTimes timeZone={timeZone} disabled={isDisabled} onChange={handleFormChange} />
               </div>
               {showActionButtons && (
                 <div
