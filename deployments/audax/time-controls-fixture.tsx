@@ -35,8 +35,14 @@ function Fixture() {
       <OptionalIssueTime label="End time" date={quick.target_date} value={quick.target_time}
         timeZone="America/Sao_Paulo" disabled={disabled}
         onSave={async (instant, day) => {
-          if (instant && quick.start_time && Date.parse(instant) < Date.parse(quick.start_time)) throw new Error("End time cannot precede start time.");
+          const before = quick;
           setQuick((old) => ({ ...old, target_time: instant, target_date: day || old.target_date }));
+          // Reproduce the real MobX store's optimistic update followed by rollback.
+          await new Promise((resolve) => setTimeout(resolve, 50));
+          if (instant && before.start_time && Date.parse(instant) < Date.parse(before.start_time)) {
+            setQuick(before);
+            throw new Error("End time cannot precede start time.");
+          }
         }} />
     </section>
     <pre id="quick-values">{JSON.stringify(quick)}</pre>

@@ -4,6 +4,7 @@ from datetime import date, datetime, timezone
 from django.conf import settings
 from django.db import transaction
 from plane.db.models import User, Workspace, Project, Issue
+from plane.app.serializers.draft import DraftIssueCreateSerializer, DraftIssueSerializer
 from plane.app.serializers.issue import IssueCreateSerializer, IssueSerializer
 
 
@@ -27,5 +28,22 @@ def run_roundtrip():
         serializer.save()
         issue.refresh_from_db()
         assert issue.start_time is None and issue.start_date == date(2026, 10, 1)
-        print('Isolated PostgreSQL round-trip: date-only, UTC save, API output and clear passed.')
+        draft_serializer = DraftIssueCreateSerializer(data={
+            'name': 'Optional-time draft', 'start_date': '2026-10-01',
+            'start_time': '2026-10-01T14:30:00-03:00',
+        }, context={'project_id': project.id, 'workspace_id': workspace.id})
+        draft_serializer.is_valid(raise_exception=True)
+        draft = draft_serializer.save()
+        draft.refresh_from_db()
+        assert draft.start_time == datetime(2026, 10, 1, 17, 30, tzinfo=timezone.utc)
+        payload = {'name': draft.name, 'start_date': str(draft.start_date),
+                   'start_time': DraftIssueSerializer(draft).data['start_time']}
+        promote = IssueCreateSerializer(data=payload, context={
+            'project_id': project.id, 'workspace_id': workspace.id, 'default_assignee_id': None,
+        })
+        promote.is_valid(raise_exception=True)
+        promoted = promote.save()
+        promoted.refresh_from_db()
+        assert promoted.start_time == draft.start_time
+        print('Isolated PostgreSQL: date-only, UTC save/read/clear and draft creation/promotion passed.')
         transaction.set_rollback(True)

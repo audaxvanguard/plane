@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { localScheduleToUtc, utcScheduleToLocal } from "@/helpers/optional-issue-time";
 
 export function OptionalIssueTime(props: {
@@ -15,8 +15,12 @@ export function OptionalIssueTime(props: {
   const [draft, setDraft] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const preserveDraft = useRef(false);
   const localValue = utcScheduleToLocal(value, timeZone);
   useEffect(() => {
+    // MobX emits optimistic values and rollbacks while the request is pending.
+    // Neither should erase the user's draft or dismiss a validation failure.
+    if (preserveDraft.current) return;
     setDraft(localValue);
     setEditing(false);
     setError("");
@@ -26,9 +30,11 @@ export function OptionalIssueTime(props: {
   const save = async (clear = false) => {
     setError("");
     setSaving(true);
+    preserveDraft.current = true;
     try {
       const instant = clear || !draft ? null : localScheduleToUtc(draft, timeZone);
       await onSave(instant, instant ? draft.slice(0, 10) : undefined);
+      preserveDraft.current = false;
       setEditing(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not save time.");
@@ -51,7 +57,12 @@ export function OptionalIssueTime(props: {
           />
           <div className="flex gap-3">
             <button type="button" disabled={disabled || saving} onClick={() => void save()}>Save time</button>
-            <button type="button" disabled={saving} onClick={() => setEditing(false)}>Cancel</button>
+            <button type="button" disabled={saving} onClick={() => {
+              preserveDraft.current = false;
+              setDraft(localValue);
+              setError("");
+              setEditing(false);
+            }}>Cancel</button>
           </div>
         </div>
       ) : (
@@ -60,6 +71,8 @@ export function OptionalIssueTime(props: {
             type="button"
             disabled={disabled || saving}
             onClick={() => {
+              preserveDraft.current = false;
+              setError("");
               setDraft(localValue || `${date}T09:00`);
               setEditing(true);
             }}

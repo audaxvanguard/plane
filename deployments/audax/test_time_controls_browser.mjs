@@ -83,6 +83,12 @@ try {
   assert.match(await quickEnd.getByRole('alert').textContent(),/cannot precede/);
   assert.equal(await quickEnd.locator('input').count(),1);
   console.log('PASS: quick-view validation failures keep editor open');
+  await quickEnd.getByLabel('End time (optional)',{exact:true}).fill('2026-10-01T15:30');
+  await quickEnd.getByRole('button',{name:'Save time',exact:true}).click();
+  await quickEnd.locator('input').waitFor({state:'detached'});
+  data=JSON.parse(await page.locator('#quick-values').textContent());
+  assert.equal(data.target_time,'2026-10-01T18:30:00.000Z');
+  console.log('PASS: corrected quick-view time saves after optimistic rollback');
 
   await quick.getByRole('button',{name:'Clear Start time',exact:true}).click();
   data=JSON.parse(await page.locator('#quick-values').textContent());
