@@ -35,6 +35,8 @@ import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useMember } from "@/hooks/store/use-member";
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
+import { useUser } from "@/hooks/store/user";
+import { OptionalIssueTime } from "./optional-time";
 // components
 import { IssueParentSelectRoot } from "@/components/issues/parent-select-root";
 import { SidebarPropertyListItem } from "@/components/common/layout/sidebar/property-list-item";
@@ -56,6 +58,8 @@ export const IssueDetailsSidebar = observer(function IssueDetailsSidebar(props: 
   const { workspaceSlug, projectId, issueId, issueOperations, isEditable } = props;
   // store hooks
   const { getProjectById } = useProject();
+  const { data: user } = useUser();
+  const timeZone = user?.user_timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
   const { areEstimateEnabledByProjectId } = useProjectEstimates();
   const {
     issue: { getIssueById },
@@ -138,6 +142,7 @@ export const IssueDetailsSidebar = observer(function IssueDetailsSidebar(props: 
             )}
 
             <SidebarPropertyListItem icon={StartDatePropertyIcon} label={t("common.order_by.start_date")}>
+              <div className="w-full space-y-1">
               <DateDropdown
                 placeholder={t("issue.add.start_date")}
                 value={issue.start_date}
@@ -155,10 +160,22 @@ export const IssueDetailsSidebar = observer(function IssueDetailsSidebar(props: 
                 hideIcon
                 clearIconClassName="h-3 w-3 hidden group-hover:inline"
               />
+              <OptionalIssueTime
+                label="Start time"
+                date={issue.start_date}
+                value={issue.start_time}
+                timeZone={timeZone}
+                disabled={!isEditable}
+                onSave={(instant, localDate) => issueOperations.update(workspaceSlug, projectId, issueId, {
+                  start_time: instant,
+                  ...(localDate ? { start_date: localDate } : {}),
+                })}
+              />
+              </div>
             </SidebarPropertyListItem>
 
             <SidebarPropertyListItem icon={DueDatePropertyIcon} label={t("common.order_by.due_date")}>
-              <div className="flex w-full items-center gap-2">
+              <div className="w-full space-y-1">
                 <DateDropdown
                   placeholder={t("issue.add.due_date")}
                   value={issue.target_date}
@@ -178,6 +195,17 @@ export const IssueDetailsSidebar = observer(function IssueDetailsSidebar(props: 
                   })}
                   hideIcon
                   clearIconClassName="h-3 w-3 hidden group-hover:inline text-primary"
+                />
+                <OptionalIssueTime
+                  label="End time"
+                  date={issue.target_date}
+                  value={issue.target_time}
+                  timeZone={timeZone}
+                  disabled={!isEditable}
+                  onSave={(instant, localDate) => issueOperations.update(workspaceSlug, projectId, issueId, {
+                    target_time: instant,
+                    ...(localDate ? { target_date: localDate } : {}),
+                  })}
                 />
               </div>
             </SidebarPropertyListItem>

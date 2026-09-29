@@ -146,6 +146,9 @@ class Issue(ChangeTrackerMixin, ProjectBaseModel):
     )
     start_date = models.DateField(null=True, blank=True)
     target_date = models.DateField(null=True, blank=True)
+    # Optional absolute instants; date-only scheduling remains unchanged.
+    start_time = models.DateTimeField(null=True, blank=True)
+    target_time = models.DateTimeField(null=True, blank=True)
     assignees = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         blank=True,
@@ -695,6 +698,8 @@ class IssueVersion(ProjectBaseModel):
     )
     start_date = models.DateField(null=True, blank=True)
     target_date = models.DateField(null=True, blank=True)
+    start_time = models.DateTimeField(null=True, blank=True)
+    target_time = models.DateTimeField(null=True, blank=True)
     assignees = ArrayField(models.UUIDField(), blank=True, default=list)
     sequence_id = models.IntegerField(default=1, verbose_name="Issue Sequence ID")
     labels = ArrayField(models.UUIDField(), blank=True, default=list)
@@ -756,6 +761,8 @@ class IssueVersion(ProjectBaseModel):
                 priority=issue.priority,
                 start_date=issue.start_date,
                 target_date=issue.target_date,
+                start_time=issue.start_time,
+                target_time=issue.target_time,
                 assignees=list(IssueAssignee.objects.filter(issue=issue).values_list("assignee_id", flat=True)),
                 sequence_id=issue.sequence_id,
                 labels=list(IssueLabel.objects.filter(issue=issue).values_list("label_id", flat=True)),

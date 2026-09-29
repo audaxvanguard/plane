@@ -68,6 +68,9 @@ export type TBaseIssue = {
   updated_at: string;
   start_date: string | null;
   target_date: string | null;
+  /** Optional UTC instants; null/absent means date-only. */
+  start_time?: string | null;
+  target_time?: string | null;
   completed_at: string | null;
   archived_at: string | null;
 

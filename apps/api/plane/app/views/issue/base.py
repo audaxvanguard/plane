@@ -182,6 +182,8 @@ class IssueListEndpoint(BaseAPIView):
                 "priority",
                 "start_date",
                 "target_date",
+                "start_time",
+                "target_time",
                 "sequence_id",
                 "project_id",
                 "parent_id",
@@ -447,6 +449,8 @@ class IssueViewSet(BaseViewSet):
                     "priority",
                     "start_date",
                     "target_date",
+                    "start_time",
+                    "target_time",
                     "sequence_id",
                     "project_id",
                     "parent_id",
@@ -879,6 +883,8 @@ class IssuePaginatedViewSet(BaseViewSet):
             "priority",
             "start_date",
             "target_date",
+            "start_time",
+            "target_time",
             "sequence_id",
             "project_id",
             "parent_id",
@@ -1161,6 +1167,8 @@ class IssueBulkUpdateDateEndpoint(BaseAPIView):
                     project_id=str(project_id),
                     epoch=epoch,
                 )
+                if str(issue.start_date) != str(start_date):
+                    issue.start_time = None
                 issue.start_date = start_date
                 issues_to_update.append(issue)
 
@@ -1174,11 +1182,13 @@ class IssueBulkUpdateDateEndpoint(BaseAPIView):
                     project_id=str(project_id),
                     epoch=epoch,
                 )
+                if str(issue.target_date) != str(target_date):
+                    issue.target_time = None
                 issue.target_date = target_date
                 issues_to_update.append(issue)
 
         # Bulk update issues
-        Issue.objects.bulk_update(issues_to_update, ["start_date", "target_date"])
+        Issue.objects.bulk_update(issues_to_update, ["start_date", "target_date", "start_time", "target_time"])
 
         return Response({"message": "Issues updated successfully"}, status=status.HTTP_200_OK)
 

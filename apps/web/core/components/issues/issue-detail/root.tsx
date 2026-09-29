@@ -101,6 +101,8 @@ export const IssueDetailRoot = observer(function IssueDetailRoot(props: TIssueDe
             type: TOAST_TYPE.ERROR,
             message: t("entity.update.failed", { entity: t("issue.label") }),
           });
+          // Optional schedule editor must remain open when validation fails.
+          if ("start_time" in data || "target_time" in data) throw error;
         }
       },
       remove: async (workspaceSlug: string, projectId: string, issueId: string) => {

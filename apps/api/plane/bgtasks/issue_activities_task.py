@@ -4,6 +4,7 @@
 
 # Python imports
 import json
+from functools import partial
 
 
 # Third Party imports
@@ -284,6 +285,19 @@ def track_start_date(
                 epoch=epoch,
             )
         )
+
+
+def track_schedule_time(requested_data, current_instance, issue_id, project_id,
+                        workspace_id, actor_id, issue_activities, epoch, *, field):
+    old = current_instance.get(field)
+    new = requested_data.get(field)
+    if old != new:
+        issue_activities.append(IssueActivity(
+            issue_id=issue_id, actor_id=actor_id, verb="updated",
+            old_value=old or "", new_value=new or "", field=field,
+            project_id=project_id, workspace_id=workspace_id,
+            comment=f"updated the {field.replace('_', ' ')}", epoch=epoch,
+        ))
 
 
 # Track changes in issue labels
@@ -609,6 +623,8 @@ def update_issue_activity(
         "description_html": track_description,
         "target_date": track_target_date,
         "start_date": track_start_date,
+        "start_time": partial(track_schedule_time, field="start_time"),
+        "target_time": partial(track_schedule_time, field="target_time"),
         "label_ids": track_labels,
         "assignee_ids": track_assignees,
         "estimate_point": track_estimate_points,
