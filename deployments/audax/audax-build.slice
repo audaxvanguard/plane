@@ -1,0 +1,15 @@
+[Unit]
+Description=Expendable Audax Plane builds and checks (never production)
+
+[Slice]
+MemoryAccounting=yes
+MemoryHigh=4608M
+MemoryMax=6G
+MemorySwapMax=0
+CPUAccounting=yes
+CPUQuota=150%
+CPUQuotaPeriodSec=100ms
+CPUWeight=1
+IOAccounting=yes
+IOWeight=1
+TasksMax=512

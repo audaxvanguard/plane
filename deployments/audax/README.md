@@ -3,10 +3,15 @@
 Fork: https://github.com/audaxvanguard/plane · branch: `audax-production`
 Baseline: upstream `v1.4.2`. Application behavior is initially unchanged.
 
-Production builds run **on the VPS**, not GitHub Actions. BuildKit is isolated to
-four CPUs / 10 GiB RAM, building one image at a time. Existing services keep
-running throughout the build. Reserve at least 25 GiB disk space for builds;
-inspect disk usage and prune only this builder's old cache when necessary.
+Production builds run **on the VPS**, not GitHub Actions. Stability takes priority
+over speed: builds and checks share a **6 GiB hard RAM budget, zero swap and
+1.5 CPUs** in `audax-build.slice`. Memory throttling starts at 4.5 GiB. CPU/I/O
+weights are lowest priority; the runner uses nice 19 and idle I/O scheduling.
+BuildKit vertices, Turbo package builds, images and type checks run serially.
+Node build/check heaps are capped at 2560 MiB; runtime image settings are unchanged.
+Existing production services are not stopped or reconfigured by build setup.
+Reserve at least 25 GiB disk space for builds; inspect disk usage and prune only
+this builder's old cache when necessary.
 
 ## Host layout
 
@@ -20,6 +25,38 @@ secrets are committed. The fork is public because upstream is public; review
 changes for secrets before pushing. Preserve AGPL notices and provide the
 corresponding source to users of modified network-accessible versions.
 
+## Build safety setup (root, once per host or policy change)
+
+```sh
+bash deployments/audax/setup-build-safety.sh
+python3 deployments/audax/test_build_safety.py
+```
+
+Setup refuses to interrupt a running builder, keeps its named cache volume,
+installs the systemd slice and recreates only the **build daemon**. Docker uses
+systemd cgroups here; Buildx's docker-container driver ignores its cgroup-parent
+option with that driver. Therefore this workflow explicitly creates the limited
+BuildKit container and connects Buildx's remote driver to a private local Unix
+socket. Do not switch back to an unconstrained builder or use ad-hoc Docker checks.
+
+`build` and `check` automatically enter the protected systemd unit. Both use the
+same deployment lock. Setup/kernel limits are verified before expensive work;
+missing or mismatched limits fail closed. The cgroup OOM-group flag is set on each
+protected entry (systemd 255 lacks a slice directive for it), including after reboot.
+
+A build/check requires **10 GiB host available RAM** to start. Every two seconds,
+the guard aborts build-only work if available RAM falls below **6 GiB**, or memory
+PSI avg10 reaches **5% some / 1% full**. Missing telemetry also fails closed.
+Compiler/OOM failures are not retried with larger limits. The builder is stopped
+before type checks and on completion/failure. Partial build images must not be
+deployed. `build` includes the frontend type check; `check` runs it separately.
+
+These bounds cover the build daemon, workers, check containers and runner, not
+Docker's shared image-import daemon or unrelated host workloads. They mitigate
+build-induced pressure, not all VPS OOMs: other services still need sensible limits
+(OmniRoute currently permits 30 GiB on a 31 GiB host). No production limits are
+changed by this setup. For stronger isolation, use an off-host builder.
+
 ## Update
 
 Review upstream changes and commit tested changes on `audax-production` first.
@@ -28,6 +65,7 @@ Do not blindly update from upstream's development branch. On the VPS:
 ```sh
 cd /opt/plane-audax
 python3 deployments/audax/test_deploy.py
+python3 deployments/audax/test_build_safety.py
 python3 deployments/audax/deploy.py build
 python3 deployments/audax/deploy.py deploy
 python3 deployments/audax/deploy.py status

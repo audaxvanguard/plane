@@ -1,0 +1,3 @@
+# Serialize BuildKit vertices as well as images and Turbo package builds.
+[worker.oci]
+  max-parallelism = 1

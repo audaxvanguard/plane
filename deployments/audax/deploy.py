@@ -11,6 +11,9 @@ import shutil
 import subprocess
 import time
 import urllib.request
+import tempfile
+import signal
+import build_safety as safety
 
 ROOT = Path(__file__).resolve().parents[2]
 COMPOSE = Path(os.environ.get('PLANE_COMPOSE', '/docker/plane-ql3x/docker-compose.yml'))
@@ -66,29 +69,62 @@ def revision():
     return run('git', '-C', ROOT, 'rev-parse', '--short=12', 'HEAD', capture=True).stdout.strip()
 
 
-def build():
+def prepare_builder():
+    safety.verify_slice()
+    safety.verify_builder()  # Fail closed BEFORE starting a misconfigured daemon.
+    safety.guarded_run(['docker', 'start', safety.BUILDER_CONTAINER])
+    safety.verify_builder()
+    safety.guarded_run(['docker', 'buildx', 'inspect', safety.BUILDER, '--bootstrap'])
+
+
+def build_image(image, context, dockerfile, tag, target=None):
+    with tempfile.TemporaryDirectory(prefix='audax-safe-build-') as directory:
+        bounded = Path(directory) / 'Dockerfile'
+        bounded.write_text(safety.bounded_dockerfile((ROOT / dockerfile).read_text()))
+        command = ['docker', 'buildx', 'build', '--builder', safety.BUILDER, '--load', '--progress=plain',
+                   '--label', f'org.opencontainers.image.revision={tag}',
+                   '--label', 'org.opencontainers.image.source=https://github.com/audaxvanguard/plane',
+                   '-t', image, '-f', bounded]
+        if target:
+            command.extend(['--target', target])
+        safety.guarded_run([*command, ROOT / context])
+
+
+def frontend_check(tag):
+    image = f'audaxvanguard/plane-web-typecheck:{tag}'
+    try:
+        build_image(image, '.', 'apps/web/Dockerfile.web', tag, target='installer')
+        safety.cleanup_build_containers()  # No builder/check overlap.
+        safety.guarded_run(safety.check_command(image, ['pnpm', '--filter', 'web', 'check:types']))
+    finally:
+        safety.cleanup_build_containers()
+        subprocess.run(['docker', 'image', 'rm', image], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def build(check_only=False):
     tag = revision()
     if shutil.disk_usage(ROOT).free < 25 * 1024**3:
         raise RuntimeError('Build requires at least 25 GiB free disk space.')
     images = image_map(tag)
-    builder = 'audax-plane'
-    exists = subprocess.run(['docker', 'buildx', 'inspect', builder], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    if exists.returncode:
-        run('docker', 'buildx', 'create', '--name', builder, '--driver', 'docker-container',
-            '--driver-opt', 'memory=10g', '--driver-opt', 'cpu-period=100000', '--driver-opt', 'cpu-quota=400000')
-    for service, context, dockerfile in [
-        ('api', 'apps/api', 'apps/api/Dockerfile.api'),
-        ('web', '.', 'apps/web/Dockerfile.web'),
-        ('admin', '.', 'apps/admin/Dockerfile.admin'),
-        ('space', '.', 'apps/space/Dockerfile.space'),
-        ('live', '.', 'apps/live/Dockerfile.live'),
-        ('proxy', 'apps/proxy', 'apps/proxy/Dockerfile.ce'),
-    ]:
-        run('docker', 'buildx', 'build', '--builder', builder, '--load', '--progress=plain',
-            '--label', f'org.opencontainers.image.revision={tag}',
-            '--label', 'org.opencontainers.image.source=https://github.com/audaxvanguard/plane',
-            '-t', images[service], '-f', ROOT / dockerfile, ROOT / context)
-    print(f'Built {tag}. Deploy explicitly with: python3 deployments/audax/deploy.py deploy', flush=True)
+    try:
+        prepare_builder()
+        if not check_only:
+            for service, context, dockerfile in [
+                ('api', 'apps/api', 'apps/api/Dockerfile.api'),
+                ('web', '.', 'apps/web/Dockerfile.web'),
+                ('admin', '.', 'apps/admin/Dockerfile.admin'),
+                ('space', '.', 'apps/space/Dockerfile.space'),
+                ('live', '.', 'apps/live/Dockerfile.live'),
+                ('proxy', 'apps/proxy', 'apps/proxy/Dockerfile.ce'),
+            ]:
+                build_image(images[service], context, dockerfile, tag)
+        frontend_check(tag)
+    finally:
+        safety.cleanup_build_containers()
+    if check_only:
+        print(f'Frontend type check passed for {tag}.', flush=True)
+    else:
+        print(f'Built and typechecked {tag}. Deploy explicitly with: python3 deployments/audax/deploy.py deploy', flush=True)
 
 
 def healthy():
@@ -188,15 +224,23 @@ def rollback(confirmed):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=['build', 'deploy', 'rollback', 'status'])
+    parser.add_argument('action', choices=['build', 'check', '_build', '_check', 'deploy', 'rollback', 'status'])
     parser.add_argument('--allow-migrations', action='store_true')
     parser.add_argument('--confirm-db-compatible', action='store_true')
     args = parser.parse_args()
+    if args.action in ('build', 'check'):
+        safety.launch_protected(args.action, Path(__file__).resolve())
+        return
+    if args.action in ('_build', '_check'):
+        safety.verify_slice()
+        def terminate_build(signum, frame):
+            raise KeyboardInterrupt('Build stopped')
+        signal.signal(signal.SIGTERM, terminate_build)
     STATE.mkdir(parents=True, exist_ok=True, mode=0o700)
     with open(STATE / 'lock', 'w') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        if args.action == 'build':
-            build()
+        if args.action in ('_build', '_check'):
+            build(check_only=args.action == '_check')
         elif args.action == 'deploy':
             deploy(args.allow_migrations)
         elif args.action == 'rollback':
