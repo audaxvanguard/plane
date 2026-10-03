@@ -11,7 +11,7 @@ from plane.db.models.api import APIToken
 
 from plane.tests.fixtures.custom_fields import (  # noqa: F401
     crm_admin, crm_member, crm_viewer, other_admin, crm_project, other_project,
-    crm_admin_client, crm_member_client, crm_viewer_client, project_endpoint,
+    crm_admin_client, crm_member_client, crm_viewer_client, project_endpoint, field_factory, currency_field,
 )
 
 
@@ -19,6 +19,13 @@ from plane.tests.fixtures.custom_fields import (  # noqa: F401
 def django_db_setup(django_db_setup):  # noqa: F811
     """Set up the Django database for the test session"""
     pass
+
+
+# Only the explicitly isolated CRM settings use the lightweight historical
+# baseline. Standard upstream test settings retain their original fixture.
+from django.conf import settings
+if settings.SETTINGS_MODULE == 'plane.settings.custom_fields_test':
+    from plane.tests.fixtures.custom_fields_database import django_db_setup  # noqa: F811
 
 
 @pytest.fixture

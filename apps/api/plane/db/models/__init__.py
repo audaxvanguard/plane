@@ -7,6 +7,7 @@ from .api import APIActivityLog, APIToken
 from .asset import FileAsset
 from .base import BaseModel
 from .cycle import Cycle, CycleIssue, CycleUserProperties
+from .custom_field import ProjectCustomField, ProjectCustomFieldOption, IssueCustomFieldValue
 from .deploy_board import DeployBoard
 from .draft import (
     DraftIssue,

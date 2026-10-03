@@ -103,7 +103,7 @@ def run_api_tests(args):
         for service in ('test-db', 'test-redis'):
             guarded_compose('up', '-d', '--wait', service)
         verify_test_containers()
-        guarded_compose('run', '--rm', '--no-deps', 'api-tests', 'pytest', '-p', 'no:cacheprovider', *args)
+        guarded_compose('run', '--rm', '--no-deps', 'api-tests', 'pytest', '-p', 'no:cacheprovider', *args, '--migrations')
     finally:
         guarded_compose('down', '--volumes', '--remove-orphans')
 
