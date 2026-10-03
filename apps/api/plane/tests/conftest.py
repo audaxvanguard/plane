@@ -9,6 +9,11 @@ from pytest_django.fixtures import django_db_setup
 from plane.db.models import User, Workspace, WorkspaceMember
 from plane.db.models.api import APIToken
 
+from plane.tests.fixtures.custom_fields import (  # noqa: F401
+    crm_admin, crm_member, crm_viewer, other_admin, crm_project, other_project,
+    crm_admin_client, crm_member_client, crm_viewer_client, project_endpoint,
+)
+
 
 @pytest.fixture(scope="session")
 def django_db_setup(django_db_setup):  # noqa: F811

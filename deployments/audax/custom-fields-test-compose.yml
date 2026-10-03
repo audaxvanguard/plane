@@ -1,0 +1,102 @@
+# Isolated, bounded tests only. No production environment, ports or volumes.
+x-limits: &limits
+  cgroup_parent: audax-build.slice
+  cpus: 1.5
+  oom_score_adj: 800
+x-env: &test-env
+  DJANGO_SETTINGS_MODULE: plane.settings.custom_fields_test
+  DATABASE_URL: postgresql://cf_test:isolated-test-only@test-db:5432/plane_custom_fields_test
+  REDIS_URL: redis://test-redis:6379/
+  RABBITMQ_HOST: test-mq
+  RABBITMQ_USER: cf_test
+  RABBITMQ_PASSWORD: isolated-test-only
+  RABBITMQ_VHOST: cf_test
+  SECRET_KEY: isolated-custom-fields-tests-not-production
+  AWS_ACCESS_KEY_ID: isolated-test-key
+  AWS_SECRET_ACCESS_KEY: isolated-test-secret
+  AWS_S3_BUCKET_NAME: uploads
+  AWS_S3_ENDPOINT_URL: http://test-minio:9000
+  AWS_REGION: us-east-1
+  USE_MINIO: "1"
+  EMAIL_HOST: test-smtp.invalid
+  WEB_URL: http://test-proxy
+  CORS_ALLOWED_ORIGINS: http://test-proxy
+  ENABLE_SIGNUP: "1"
+  PYTHONDONTWRITEBYTECODE: "1"
+  PYTHONUNBUFFERED: "1"
+services:
+  test-db:
+    <<: *limits
+    image: postgres:15.7-alpine
+    mem_limit: 1g
+    memswap_limit: 1g
+    environment:
+      POSTGRES_USER: cf_test
+      POSTGRES_PASSWORD: isolated-test-only
+      POSTGRES_DB: plane_custom_fields_test
+    tmpfs:
+      - /var/lib/postgresql/data:size=512m
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U cf_test -d plane_custom_fields_test"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+  test-redis:
+    <<: *limits
+    image: valkey/valkey:7.2.11-alpine
+    mem_limit: 128m
+    memswap_limit: 128m
+    tmpfs: [/data:size=64m]
+    healthcheck:
+      test: [CMD, valkey-cli, ping]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+  test-mq:
+    profiles: [extras]
+    <<: *limits
+    image: rabbitmq:3.13.6-management-alpine
+    mem_limit: 512m
+    memswap_limit: 512m
+    environment:
+      RABBITMQ_DEFAULT_USER: cf_test
+      RABBITMQ_DEFAULT_PASS: isolated-test-only
+      RABBITMQ_DEFAULT_VHOST: cf_test
+    tmpfs: [/var/lib/rabbitmq:size=128m]
+    healthcheck:
+      test: [CMD, rabbitmq-diagnostics, -q, ping]
+      interval: 3s
+      timeout: 10s
+      retries: 30
+  test-minio:
+    profiles: [extras]
+    <<: *limits
+    image: pgsty/minio:latest
+    mem_limit: 256m
+    memswap_limit: 256m
+    command: [server, /export]
+    environment:
+      MINIO_ROOT_USER: isolated-test-key
+      MINIO_ROOT_PASSWORD: isolated-test-secret
+      GOMEMLIMIT: 128MiB
+      GOMAXPROCS: "1"
+      MINIO_API_REQUESTS_MAX: "8"
+    tmpfs: [/export:size=64m]
+    healthcheck:
+      test: [CMD-SHELL, "curl -sf http://localhost:9000/minio/health/live"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+  api-tests:
+    <<: *limits
+    image: audax-plane-custom-fields-test:working
+    mem_limit: 3g
+    memswap_limit: 3g
+    environment: *test-env
+    volumes:
+      - ${CF_SOURCE:-../../apps/api}:/code:ro
+    tmpfs:
+      - /tmp:size=256m
+    working_dir: /code
+    entrypoint: [/bin/sh, -c, 'mkdir -p /tmp/collected-static; renice 19 $$ >/dev/null; exec "$@"', --]
+    command: [pytest, -p, "no:cacheprovider"]
