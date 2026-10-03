@@ -43,7 +43,10 @@ from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
 
 
-class IssueSerializer(BaseSerializer):
+from plane.app.serializers.custom_field import CustomValuesMixin, CustomValuesListSerializer, issue_custom_values_write
+
+
+class IssueSerializer(CustomValuesMixin, BaseSerializer):
     """
     Comprehensive work item serializer with full relationship management.
 
@@ -69,6 +72,7 @@ class IssueSerializer(BaseSerializer):
 
     class Meta:
         model = Issue
+        list_serializer_class = CustomValuesListSerializer
         read_only_fields = ["id", "workspace", "project", "updated_by", "updated_at", "completed_at"]
         exclude = ["description_json", "description_stripped"]
 
@@ -148,6 +152,7 @@ class IssueSerializer(BaseSerializer):
 
         return data
 
+    @issue_custom_values_write
     def create(self, validated_data):
         assignees = validated_data.pop("assignees", None)
         labels = validated_data.pop("labels", None)
@@ -231,6 +236,7 @@ class IssueSerializer(BaseSerializer):
 
         return issue
 
+    @issue_custom_values_write
     def update(self, instance, validated_data):
         assignees = validated_data.pop("assignees", None)
         labels = validated_data.pop("labels", None)

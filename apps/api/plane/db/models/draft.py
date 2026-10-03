@@ -57,6 +57,7 @@ class DraftIssue(WorkspaceBaseModel):
     target_date = models.DateField(null=True, blank=True)
     start_time = models.DateTimeField(null=True, blank=True)
     target_time = models.DateTimeField(null=True, blank=True)
+    custom_values = models.JSONField(default=dict, blank=True)
     assignees = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         blank=True,

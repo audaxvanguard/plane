@@ -7,11 +7,16 @@ from rest_framework import serializers
 
 # Module imports
 from .base import DynamicBaseSerializer
+from .custom_field import CustomValuesListSerializer
+from plane.app.services.custom_fields import serialize_custom_values
 from plane.db.models import IssueView
 from plane.utils.issue_filters import issue_filters
 
 
 class ViewIssueListSerializer(serializers.Serializer):
+    class Meta:
+        list_serializer_class = CustomValuesListSerializer
+
     def get_assignee_ids(self, instance):
         return [assignee.assignee_id for assignee in instance.issue_assignee.all()]
 
@@ -25,6 +30,7 @@ class ViewIssueListSerializer(serializers.Serializer):
         data = {
             "id": instance.id,
             "name": instance.name,
+            "custom_values": serialize_custom_values(instance),
             "state_id": instance.state_id,
             "sort_order": instance.sort_order,
             "completed_at": instance.completed_at,

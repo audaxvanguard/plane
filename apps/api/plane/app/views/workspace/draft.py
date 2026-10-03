@@ -11,6 +11,8 @@ from django.core import serializers
 from django.core.serializers.json import DjangoJSONEncoder
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.contrib.postgres.fields import ArrayField
+from django.db import transaction
+from plane.app.services.custom_fields import promote_draft_values, validate_draft_values
 from django.db.models import Q, UUIDField, Value, Subquery, OuterRef
 from django.db.models.functions import Coalesce
 from django.utils.decorators import method_decorator
@@ -35,6 +37,7 @@ from plane.db.models import (
     ModuleIssue,
     DraftIssueCycle,
     Workspace,
+    Project,
     FileAsset,
 )
 from .. import BaseViewSet
@@ -117,6 +120,7 @@ class WorkspaceDraftIssueViewSet(BaseViewSet):
             context={
                 "workspace_id": workspace.id,
                 "project_id": request.data.get("project_id", None),
+                "actor": request.user,
             },
         )
         if serializer.is_valid():
@@ -136,6 +140,7 @@ class WorkspaceDraftIssueViewSet(BaseViewSet):
                     "target_date",
                     "start_time",
                     "target_time",
+                    "custom_values",
                     "project_id",
                     "parent_id",
                     "cycle_id",
@@ -176,6 +181,7 @@ class WorkspaceDraftIssueViewSet(BaseViewSet):
             context={
                 "project_id": project_id,
                 "cycle_id": request.data.get("cycle_id", "not_provided"),
+                "actor": request.user,
             },
         )
 
@@ -205,8 +211,14 @@ class WorkspaceDraftIssueViewSet(BaseViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @allow_permission(allowed_roles=[ROLE.ADMIN, ROLE.MEMBER], level="WORKSPACE")
+    @transaction.atomic
     def create_draft_to_issue(self, request, slug, draft_id):
         draft_issue = self.get_queryset().filter(pk=draft_id).first()
+        if draft_issue is None:
+            return Response({'error': 'Draft not found.'}, status=status.HTTP_404_NOT_FOUND)
+        if draft_issue.project_id:
+            Project.objects.select_for_update().get(id=draft_issue.project_id)
+            draft_issue = DraftIssue.objects.select_for_update(of=('self',)).get(pk=draft_id, workspace__slug=slug, created_by=request.user)
 
         if not draft_issue.project_id:
             return Response(
@@ -214,9 +226,14 @@ class WorkspaceDraftIssueViewSet(BaseViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        issue_data = request.data.copy()
+        value_patch = issue_data.pop('custom_values', {})
+        merged_values = validate_draft_values(draft_issue.project, value_patch, draft_issue.custom_values)
+        draft_issue.custom_values = merged_values
         serializer = IssueCreateSerializer(
-            data=request.data,
+            data=issue_data,
             context={
+                "actor": request.user,
                 "project_id": draft_issue.project_id,
                 "workspace_id": draft_issue.project.workspace_id,
                 "default_assignee_id": draft_issue.project.default_assignee_id,
@@ -224,7 +241,9 @@ class WorkspaceDraftIssueViewSet(BaseViewSet):
         )
 
         if serializer.is_valid():
-            serializer.save()
+            draft_issue.save(update_fields=['custom_values'])
+            promoted_issue = serializer.save()
+            promote_draft_values(draft_issue, promoted_issue, actor=request.user)
 
             issue_activity.delay(
                 type="issue.activity.created",

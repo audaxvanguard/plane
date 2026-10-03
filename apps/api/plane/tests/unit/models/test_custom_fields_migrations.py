@@ -26,5 +26,6 @@ def test_empty_database_backward_forward_and_no_pending_migrations():
     assert DraftIssue._meta.get_field("target_time").null
     assert not ProjectCustomField.objects.exists()
     assert IssueView._meta.get_field("filters").default() == {}
+    MigrationExecutor(connection).migrate(MigrationExecutor(connection).loader.graph.leaf_nodes())
     call_command("makemigrations", "db", check=True, dry_run=True, verbosity=0)
     call_command("check", verbosity=0)

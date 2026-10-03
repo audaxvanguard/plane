@@ -22,6 +22,7 @@ from plane.db.models import (
     DraftIssueCycle,
     DraftIssueModule,
     ProjectMember,
+    Project,
     EstimatePoint,
 )
 from plane.utils.content_validator import (
@@ -31,7 +32,12 @@ from plane.utils.content_validator import (
 from plane.app.permissions import ROLE
 
 
-class DraftIssueCreateSerializer(BaseSerializer):
+from .custom_field import CustomValuesMixin, draft_custom_values_write
+
+
+class DraftIssueCreateSerializer(CustomValuesMixin, BaseSerializer):
+    project_id = serializers.PrimaryKeyRelatedField(source='project', queryset=Project.objects.all(), required=False, allow_null=True)
+    confirm_clear_custom_values = serializers.BooleanField(write_only=True, required=False)
     # ids
     state_id = serializers.PrimaryKeyRelatedField(
         source="state", queryset=State.objects.all(), required=False, allow_null=True
@@ -54,6 +60,7 @@ class DraftIssueCreateSerializer(BaseSerializer):
         model = DraftIssue
         fields = "__all__"
         read_only_fields = [
+            "project",
             "workspace",
             "created_by",
             "updated_by",
@@ -135,6 +142,7 @@ class DraftIssueCreateSerializer(BaseSerializer):
 
         return attrs
 
+    @draft_custom_values_write
     def create(self, validated_data):
         assignees = validated_data.pop("assignee_ids", None)
         labels = validated_data.pop("label_ids", None)
@@ -212,6 +220,7 @@ class DraftIssueCreateSerializer(BaseSerializer):
 
         return issue
 
+    @draft_custom_values_write
     def update(self, instance, validated_data):
         assignees = validated_data.pop("assignee_ids", None)
         labels = validated_data.pop("label_ids", None)

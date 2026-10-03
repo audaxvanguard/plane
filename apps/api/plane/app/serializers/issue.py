@@ -80,7 +80,10 @@ class IssueProjectLiteSerializer(BaseSerializer):
 
 ##TODO: Find a better way to write this serializer
 ## Find a better approach to save manytomany?
-class IssueCreateSerializer(BaseSerializer):
+from .custom_field import CustomValuesMixin, CustomValuesField, CustomValuesListSerializer, issue_custom_values_write
+
+
+class IssueCreateSerializer(CustomValuesMixin, BaseSerializer):
     # ids
     state_id = serializers.PrimaryKeyRelatedField(
         source="state", queryset=State.all_state_objects.all(), required=False, allow_null=True
@@ -192,6 +195,7 @@ class IssueCreateSerializer(BaseSerializer):
 
         return attrs
 
+    @issue_custom_values_write
     def create(self, validated_data):
         assignees = validated_data.pop("assignee_ids", None)
         labels = validated_data.pop("label_ids", None)
@@ -269,6 +273,7 @@ class IssueCreateSerializer(BaseSerializer):
 
         return issue
 
+    @issue_custom_values_write
     def update(self, instance, validated_data):
         assignees = validated_data.pop("assignee_ids", None)
         labels = validated_data.pop("label_ids", None)
@@ -764,6 +769,7 @@ class IssueIntakeSerializer(DynamicBaseSerializer):
 
 
 class IssueSerializer(DynamicBaseSerializer):
+    custom_values = CustomValuesField(read_only=True)
     # ids
     cycle_id = serializers.PrimaryKeyRelatedField(read_only=True)
     module_ids = serializers.ListField(child=serializers.UUIDField(), required=False)
@@ -779,9 +785,11 @@ class IssueSerializer(DynamicBaseSerializer):
 
     class Meta:
         model = Issue
+        list_serializer_class = CustomValuesListSerializer
         fields = [
             "id",
             "name",
+            "custom_values",
             "state_id",
             "sort_order",
             "completed_at",
@@ -820,6 +828,9 @@ class IssueSerializer(DynamicBaseSerializer):
 
 
 class IssueListDetailSerializer(serializers.Serializer):
+    class Meta:
+        list_serializer_class = CustomValuesListSerializer
+
     def __init__(self, *args, **kwargs):
         # Extract expand parameter and store it as instance variable
         self.expand = kwargs.pop("expand", []) or []
@@ -841,6 +852,7 @@ class IssueListDetailSerializer(serializers.Serializer):
             # Basic fields
             "id": instance.id,
             "name": instance.name,
+            "custom_values": CustomValuesField().to_representation(instance),
             "state_id": instance.state_id,
             "sort_order": instance.sort_order,
             "completed_at": instance.completed_at,
