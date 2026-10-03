@@ -98,5 +98,5 @@ services:
     tmpfs:
       - /tmp:size=256m
     working_dir: /code
-    entrypoint: [/bin/sh, -c, 'mkdir -p /tmp/collected-static; renice 19 $$ >/dev/null; exec "$@"', --]
+    entrypoint: [/bin/sh, -c, 'mkdir -p /tmp/collected-static; renice 19 $$$$ >/dev/null; exec "$@"', --]
     command: [pytest, -p, "no:cacheprovider"]

@@ -73,6 +73,10 @@ class HarnessTests(unittest.TestCase):
         self.assertIn('--property=MemorySwapMax=0',command)
         self.assertIn('--slice=audax-build.slice',command)
 
+    def test_interrupt_is_failure_not_systemd_clean_sigint(self):
+        with self.assertRaises(RuntimeError):
+            runner.handle_interrupt(15, None)
+
     def test_helper_path_cannot_escape_source(self):
         with self.assertRaises(RuntimeError):
             runner.helper_path('/tmp/outside.mjs')

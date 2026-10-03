@@ -152,6 +152,11 @@ def protected_command(mode, args):
     return [*command, sys.executable, str(Path(__file__).resolve()), '_' + mode, *args]
 
 
+def handle_interrupt(signum, frame):
+    # systemd treats a raw SIGINT exit as clean; cancelled tests must fail.
+    raise RuntimeError('Test job interrupted')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('mode', choices=['api', 'helpers', 'browser', '_api', '_helpers', '_browser'])
@@ -166,9 +171,8 @@ def main():
     safety.verify_slice()
     os.chdir(ROOT)
     os.environ.update(compose_env())
-    def interrupted(signum, frame):
-        raise KeyboardInterrupt('Test job interrupted')
-    signal.signal(signal.SIGTERM, interrupted)
+    signal.signal(signal.SIGTERM, handle_interrupt)
+    signal.signal(signal.SIGINT, handle_interrupt)
     with open(STATE / 'lock', 'a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         {'_api': run_api_tests, '_helpers': run_helpers, '_browser': run_browser}[args.mode](args.args)
