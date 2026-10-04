@@ -138,7 +138,17 @@ def issue_on_results(
         original_list.append(sub_group_by)
 
     required_fields.extend(original_list)
-    return list(issues.values(*required_fields))
+    if group_by == 'custom_group' or sub_group_by == 'custom_group':
+        required_fields.append('custom_group')
+    rows = list(issues.values(*required_fields))
+    from plane.db.models import IssueCustomFieldValue
+    from plane.app.services.custom_fields import stored_scalar
+    values = {}
+    for value in IssueCustomFieldValue.objects.filter(issue_id__in=[row['id'] for row in rows]).select_related('field'):
+        values.setdefault(value.issue_id, {})[str(value.field_id)] = stored_scalar(value)
+    for row in rows:
+        row['custom_values'] = values.get(row['id'], {})
+    return rows
 
 
 def issue_group_values(
@@ -148,6 +158,8 @@ def issue_group_values(
     filters: Dict[str, Any] = {},
     queryset: Optional[QuerySet] = None,
 ) -> List[Union[str, Any]]:
+    if field == 'custom_group':
+        return list(queryset.order_by().values_list('custom_group', flat=True).distinct())
     if field == "state_id":
         queryset = State.objects.filter(is_triage=False, workspace__slug=slug).values_list("id", flat=True)
         if project_id:

@@ -42,6 +42,22 @@ def authorized_project(request, workspace_slug, project_id, *, admin=False, lock
     return project
 
 
+class CustomFieldAggregateEndpoint(BaseAPIView):
+    def post(self,request,workspace_slug,project_id):
+        from plane.app.services.custom_field_queries import resolve_view_config,aggregate_custom_fields
+        from plane.db.models import IssueView
+        project=authorized_project(request,workspace_slug,project_id)
+        config=resolve_view_config(user=request.user,project=project,view_id=request.data.get('view_id'),override=request.data.get('custom_view'))
+        saved=IssueView.objects.filter(id=request.data.get('view_id'),project=project).first() if request.data.get('view_id') else None
+        options={}
+        for key in ('filters','rich_filters','display_filters'):
+            value=request.data.get(key,getattr(saved,key,{}) if saved else {})
+            if not isinstance(value,dict): raise ValidationError(f'{key} must be an object.')
+            options[key]=value
+        return Response(aggregate_custom_fields(user=request.user,project=project,config=config,
+            builtin_filters=options['filters'],rich_filters=options['rich_filters'],display_filters=options['display_filters']))
+
+
 class CustomFieldCollectionEndpoint(BaseAPIView):
     def get(self, request, workspace_slug, project_id):
         project = authorized_project(request, workspace_slug, project_id)

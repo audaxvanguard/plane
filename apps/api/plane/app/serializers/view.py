@@ -9,7 +9,8 @@ from rest_framework import serializers
 from .base import DynamicBaseSerializer
 from .custom_field import CustomValuesListSerializer
 from plane.app.services.custom_fields import serialize_custom_values
-from plane.db.models import IssueView
+from plane.db.models import IssueView, Project
+from plane.app.services.custom_field_queries import validate_custom_view
 from plane.utils.issue_filters import issue_filters
 
 
@@ -74,6 +75,13 @@ class IssueViewSerializer(DynamicBaseSerializer):
             "is_locked",
         ]
 
+    def validate_custom_view(self, value):
+        project = self.instance.project if self.instance else None
+        view = self.context.get('view')
+        if self.instance is None and view is not None and view.kwargs.get('project_id'):
+            project = Project.objects.filter(id=view.kwargs['project_id'], workspace__slug=view.kwargs.get('slug')).first()
+        return validate_custom_view(project, value)
+
     def create(self, validated_data):
         query_params = validated_data.get("filters", {})
         if bool(query_params):
@@ -83,10 +91,7 @@ class IssueViewSerializer(DynamicBaseSerializer):
         return IssueView.objects.create(**validated_data)
 
     def update(self, instance, validated_data):
-        query_params = validated_data.get("filters", {})
-        if bool(query_params):
-            validated_data["query"] = issue_filters(query_params, "POST")
-        else:
-            validated_data["query"] = {}
-        validated_data["query"] = issue_filters(query_params, "PATCH")
+        if 'filters' in validated_data:
+            query_params = validated_data['filters']
+            validated_data['query'] = issue_filters(query_params, 'PATCH') if query_params else {}
         return super().update(instance, validated_data)

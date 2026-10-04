@@ -71,6 +71,8 @@ from plane.utils.grouper import (
 from plane.utils.host import base_host
 from plane.utils.issue_filters import issue_filters
 from plane.utils.order_queryset import order_issue_queryset
+from plane.app.services.custom_field_queries import resolve_view_config, apply_custom_conditions, apply_custom_sort, get_custom_group
+from plane.app.services.custom_fields import resolve_fields
 from plane.utils.paginator import GroupedOffsetPaginator, SubGroupedOffsetPaginator
 from plane.utils.timezone_converter import user_timezone_converter
 
@@ -284,6 +286,15 @@ class IssueViewSet(BaseViewSet):
         # Apply legacy filters
         issue_queryset = issue_queryset.filter(**filters, **extra_filters)
 
+        custom_config = resolve_view_config(user=request.user, project=project,
+            view_id=request.GET.get('view_id'), override=request.GET.get('custom_view'))
+        issue_queryset = apply_custom_conditions(issue_queryset, custom_config)
+        custom_group_field = None
+        if custom_config.get('group_by'):
+            group_id = custom_config['group_by']['field_id']
+            custom_group_field = next(iter(resolve_fields(project.id, [group_id], for_write=False).values()))
+            issue_queryset = issue_queryset.annotate(**get_custom_group(custom_group_field))
+
         # Keeping a copy of the queryset before applying annotations
         filtered_issue_queryset = copy.deepcopy(issue_queryset)
 
@@ -294,9 +305,12 @@ class IssueViewSet(BaseViewSet):
         issue_queryset, order_by_param = order_issue_queryset(
             issue_queryset=issue_queryset, order_by_param=order_by_param
         )
+        if custom_config.get('sort'):
+            issue_queryset = apply_custom_sort(issue_queryset, custom_config)
+            order_by_param = ('-' if custom_config['sort']['direction'] == 'desc' else '') + '_custom_sort'
 
         # Group by
-        group_by = request.GET.get("group_by", False)
+        group_by = 'custom_group' if custom_group_field else request.GET.get("group_by", False)
         sub_group_by = request.GET.get("sub_group_by", False)
 
         # issue queryset

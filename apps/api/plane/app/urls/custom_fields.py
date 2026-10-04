@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 from django.urls import path
 from plane.app.views.project.custom_fields import (
+    CustomFieldAggregateEndpoint,
     CustomFieldCollectionEndpoint,
     CustomFieldDetailEndpoint,
     CustomFieldOptionCollectionEndpoint,
@@ -10,6 +11,7 @@ from plane.app.views.project.custom_fields import (
 
 ROOT = "workspaces/<str:workspace_slug>/projects/<uuid:project_id>/custom-fields/"
 urlpatterns = [
+    path(ROOT+'aggregates/',CustomFieldAggregateEndpoint.as_view(),name='project-custom-field-aggregates'),
     path(ROOT, CustomFieldCollectionEndpoint.as_view(), name="project-custom-fields"),
     path(
         ROOT + "<uuid:field_id>/",

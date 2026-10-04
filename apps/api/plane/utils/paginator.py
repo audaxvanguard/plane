@@ -133,7 +133,8 @@ class OffsetPaginator:
 
         # queryset
         queryset = self.queryset
-        if self.key:
+        custom_order = self.key == ('_custom_sort',) and '_custom_sort' in queryset.query.annotations
+        if self.key and not custom_order:
             queryset = queryset.order_by(
                 (F(*self.key).desc(nulls_last=True) if self.desc else F(*self.key).asc(nulls_last=True)),
                 "-created_at",
@@ -246,26 +247,15 @@ class GroupedOffsetPaginator(OffsetPaginator):
 
         # Compute the results
         results = {}
-        # Create window for all the groups
+        # Custom orders already include typed null handling and stable ID ties.
+        ordering = queryset.query.order_by if self.key == ('_custom_sort',) else (
+            F(*self.key).desc(nulls_last=True) if self.desc else F(*self.key).asc(nulls_last=True),
+            F('created_at').desc(),
+        )
         queryset = queryset.annotate(
-            row_number=Window(
-                expression=RowNumber(),
-                partition_by=[F(self.group_by_field_name)],
-                order_by=(
-                    (
-                        F(*self.key).desc(nulls_last=True)  # order by desc if desc is set
-                        if self.desc
-                        else F(*self.key).asc(nulls_last=True)  # Order by asc if set
-                    ),
-                    F("created_at").desc(),
-                ),
-            )
+            row_number=Window(expression=RowNumber(), partition_by=[F(self.group_by_field_name)], order_by=ordering)
         )
-        # Filter the results by row number
-        results = queryset.filter(row_number__gt=offset, row_number__lt=stop).order_by(
-            (F(*self.key).desc(nulls_last=True) if self.desc else F(*self.key).asc(nulls_last=True)),
-            F("created_at").desc(),
-        )
+        results = queryset.filter(row_number__gt=offset, row_number__lt=stop).order_by(*ordering)
 
         # Adjust cursors based on the grouped results for pagination
         next_cursor = Cursor(limit, page + 1, False, queryset.filter(row_number__gte=stop).exists())
@@ -687,7 +677,9 @@ class BasePaginator:
                 # paginators below — prevents unauthenticated ORM field-name
                 # injection via user-supplied group_by/sub_group_by query params
                 # (GHSA-wwgj-929g-42cm).
-                if group_by_field_name not in ISSUE_GROUP_BY_ALLOWLIST:
+                custom_group_valid = (group_by_field_name == 'custom_group'
+                    and 'custom_group' in paginator_kwargs['queryset'].query.annotations)
+                if group_by_field_name not in ISSUE_GROUP_BY_ALLOWLIST and not custom_group_valid:
                     raise ParseError(detail=f"Invalid group_by field: {group_by_field_name}")
 
                 paginator_kwargs["group_by_field_name"] = group_by_field_name
