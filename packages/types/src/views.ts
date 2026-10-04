@@ -18,6 +18,7 @@ export enum EViewAccess {
 }
 
 export interface IProjectView {
+  custom_view?: import("./custom-fields").TProjectCustomViewConfig | Record<string, never>;
   id: string;
   access: EViewAccess;
   created_at: Date;

@@ -69,6 +69,7 @@ export type TBaseIssue = {
   start_date: string | null;
   target_date: string | null;
   /** Optional UTC instants; null/absent means date-only. */
+  custom_values?: import("../custom-fields").TCustomValues;
   start_time?: string | null;
   target_time?: string | null;
   completed_at: string | null;
