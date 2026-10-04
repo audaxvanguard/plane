@@ -1,1 +1,1 @@
-{"name":"audax-custom-fields-browser-tests","private":true,"type":"module","version":"1.0.0","dependencies":{"playwright-core":"1.58.2"}}
+{"name":"audax-custom-fields-browser-tests","private":true,"type":"module","version":"1.0.0","dependencies":{"playwright-core":"1.58.2","esbuild":"0.25.5","react":"19.0.0","react-dom":"19.0.0"}}

@@ -123,7 +123,39 @@ def run_helpers(args):
                         '--test', *[helper_path(path) for path in args]])
 
 
+def run_native_browser(args):
+    if not args or args[0] != '--fixture' or len(args) != 2:
+        raise RuntimeError('Native browser mode requires an explicit fixture script.')
+    script = helper_path(args[1])
+    node = os.environ.get('CF_NODE')
+    if not node or not Path(node).is_file():
+        raise RuntimeError('A resolved Node executable is required.')
+    safety.cleanup_build_containers()
+    with tempfile.TemporaryDirectory(prefix='audax-cf-browser-') as directory:
+        work = Path(directory)
+        for name in ('package.json', 'package-lock.json'):
+            shutil.copy(ROOT / 'deployments/audax/browser' / name, work / name)
+        shutil.copy(script, work / 'run.mjs')
+        env = {**os.environ, 'SOURCE_ROOT': str(ROOT), 'CHROME_PATH': '/usr/bin/google-chrome',
+               'NODE_OPTIONS': '--max-old-space-size=256',
+               'PATH': str(Path(node).parent) + ':' + os.environ.get('PATH', '')}
+        previous_cwd = Path.cwd()
+        previous_env = dict(os.environ)
+        try:
+            os.chdir(work)
+            os.environ.update(env)
+            safety.guarded_run([node, str(Path(node).parent / 'npm'), 'ci', '--ignore-scripts',
+                                '--no-audit', '--no-fund', '--cache', str(work / 'cache')])
+            safety.guarded_run([node, work / 'run.mjs'])
+        finally:
+            os.chdir(previous_cwd)
+            os.environ.clear()
+            os.environ.update(previous_env)
+
+
 def run_browser(args):
+    if Path('/usr/bin/google-chrome').is_file() and args and args[0] == '--fixture':
+        return run_native_browser(args)
     package = ROOT / 'deployments/audax/browser'
     script = args[1] if args and args[0] == '--fixture' else 'deployments/audax/browser/smoke.mjs'
     script = helper_path(script)
@@ -147,8 +179,8 @@ def protected_command(mode, args):
     command = ['systemd-run', '--wait', '--pipe', '--collect', '--unit=audax-custom-fields-tests',
                f'--slice={safety.SLICE}', '--property=Nice=19', '--property=IOSchedulingClass=idle',
                '--property=OOMScoreAdjust=800', '--property=MemorySwapMax=0']
-    if mode == 'helpers':
-        command.extend(['--property=MemoryMax=256M', f'--setenv=CF_NODE={shutil.which("node")}'])
+    if mode in ('helpers', 'browser'):
+        command.extend([f'--property=MemoryMax={"256M" if mode == "helpers" else "1G"}', f'--setenv=CF_NODE={shutil.which("node")}'])
     return [*command, sys.executable, str(Path(__file__).resolve()), '_' + mode, *args]
 
 

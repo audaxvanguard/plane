@@ -73,6 +73,11 @@ class HarnessTests(unittest.TestCase):
         self.assertIn('--property=MemorySwapMax=0',command)
         self.assertIn('--slice=audax-build.slice',command)
 
+    def test_native_browser_unit_is_bounded(self):
+        command=runner.protected_command('browser', ['--fixture','test.mjs'])
+        self.assertIn('--property=MemoryMax=1G',command)
+        self.assertTrue(any(arg.startswith('--setenv=CF_NODE=') for arg in command))
+
     def test_interrupt_is_failure_not_systemd_clean_sigint(self):
         with self.assertRaises(RuntimeError):
             runner.handle_interrupt(15, None)
