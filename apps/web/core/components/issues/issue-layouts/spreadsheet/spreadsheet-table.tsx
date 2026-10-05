@@ -7,6 +7,11 @@
 import type { MutableRefObject } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
+import { useParams } from "next/navigation";
+import { useViewConfiguration } from "@/hooks/use-view-configuration";
+import { useProjectCustomFieldDefinitions } from "@/hooks/use-project-custom-field-definitions";
+import { projectQueryConfig, resolveViewColumns } from "@/helpers/project-view-config";
+import type { TCustomBuiltinColumn } from "@plane/types";
 // plane imports
 import type { IIssueDisplayFilterOptions, IIssueDisplayProperties, TIssue } from "@plane/types";
 // components
@@ -21,6 +26,7 @@ import type { TRenderQuickActions } from "../list/list-view-types";
 import { getDisplayPropertiesCount } from "../utils";
 import { SpreadsheetIssueRow } from "./issue-row";
 import { SpreadsheetHeader } from "./spreadsheet-header";
+import { SpreadsheetColumnsContext } from "./column-context";
 
 type Props = {
   displayProperties: IIssueDisplayProperties;
@@ -59,6 +65,17 @@ export const SpreadsheetTable = observer(function SpreadsheetTable(props: Props)
     isEpic = false,
   } = props;
 
+  const params = useParams();
+  const slug = params.workspaceSlug?.toString(), projectId = params.projectId?.toString(), viewId = params.viewId?.toString();
+  const configuration = useViewConfiguration();
+  const metadata = useProjectCustomFieldDefinitions(!isEpic ? slug : undefined, !isEpic ? projectId : undefined);
+  const working = slug && projectId && viewId ? configuration.get({ workspaceSlug: slug, projectId, viewId })?.working : undefined;
+  const aliases: Record<string, string> = { assignee: "assignees", due_date: "target_date", created_on: "created_at", updated_on: "updated_at" };
+  const resolvedColumns = projectId && !isEpic ? resolveViewColumns(working ? projectQueryConfig(working) : {}, metadata.fields, {
+    estimate: isEstimateEnabled, cycle: spreadsheetColumnsList.includes("cycle"), modules: spreadsheetColumnsList.includes("modules"),
+    legacyColumns: spreadsheetColumnsList.filter((p) => displayProperties[p]).map((p) => (aliases[p] ?? p) as TCustomBuiltinColumn),
+    legacyCustomFields: displayProperties.custom_fields,
+  }) : undefined;
   // states
   const isScrolled = useRef(false);
   const [intersectionElement, setIntersectionElement] = useState<HTMLTableSectionElement | null>(null);
@@ -111,8 +128,9 @@ export const SpreadsheetTable = observer(function SpreadsheetTable(props: Props)
   const displayPropertiesCount = getDisplayPropertiesCount(displayProperties, ignoreFieldsForCounting);
 
   return (
-    <table className="w-full overflow-y-auto bg-surface-1" onKeyDown={handleKeyBoardNavigation}>
+    <SpreadsheetColumnsContext.Provider value={resolvedColumns}><table className="w-full overflow-y-auto bg-surface-1" onKeyDown={handleKeyBoardNavigation}>
       <SpreadsheetHeader
+        resolvedColumns={resolvedColumns}
         displayProperties={displayProperties}
         displayFilters={displayFilters}
         handleDisplayFilterUpdate={handleDisplayFilterUpdate}
@@ -149,6 +167,6 @@ export const SpreadsheetTable = observer(function SpreadsheetTable(props: Props)
           ))}
         </tfoot>
       )}
-    </table>
+    </table></SpreadsheetColumnsContext.Provider>
   );
 });

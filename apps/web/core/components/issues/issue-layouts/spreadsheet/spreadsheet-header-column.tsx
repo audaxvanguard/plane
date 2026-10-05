@@ -14,6 +14,7 @@ import { WithDisplayPropertiesHOC } from "../properties/with-display-properties-
 import { HeaderColumn } from "./columns/header-column";
 
 interface Props {
+  title?: string;
   displayProperties: IIssueDisplayProperties;
   property: keyof IIssueDisplayProperties;
   isEstimateEnabled: boolean;
@@ -41,6 +42,7 @@ export const SpreadsheetHeaderColumn = observer(function SpreadsheetHeaderColumn
         tabIndex={0}
       >
         <HeaderColumn
+          title={props.title}
           displayFilters={displayFilters}
           handleDisplayFilterUpdate={handleDisplayFilterUpdate}
           property={property}

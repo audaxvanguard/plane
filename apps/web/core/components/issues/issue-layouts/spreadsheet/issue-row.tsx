@@ -5,7 +5,7 @@
  */
 
 import type { Dispatch, MouseEvent, MutableRefObject, SetStateAction } from "react";
-import { useRef, useState } from "react";
+import { useContext, useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "next/navigation";
 import { MoreHorizontal } from "lucide-react";
@@ -35,6 +35,8 @@ import { usePlatformOS } from "@/hooks/use-platform-os";
 import type { TRenderQuickActions } from "../list/list-view-types";
 import { isIssueNew } from "../utils";
 import { IssueColumn } from "./issue-column";
+import { SpreadsheetColumnsContext } from "./column-context";
+import { CustomFieldColumn } from "./columns/custom-field-column";
 
 interface Props {
   displayProperties: IIssueDisplayProperties;
@@ -170,6 +172,8 @@ interface IssueRowDetailsProps {
 }
 
 const IssueRowDetails = observer(function IssueRowDetails(props: IssueRowDetailsProps) {
+  const resolvedColumns = useContext(SpreadsheetColumnsContext);
+  const { issue: authoritativeIssues } = useIssueDetail();
   const {
     displayProperties,
     issueId,
@@ -385,7 +389,12 @@ const IssueRowDetails = observer(function IssueRowDetails(props: IssueRowDetails
         </ControlLink>
       </td>
       {/* Rest of the columns */}
-      {spreadsheetColumnsList.map((property) => (
+      {resolvedColumns ? resolvedColumns.filter((column) => !["name", "identifier"].includes(column.reference)).map((column) => {
+        if (column.kind === "custom") return column.field ? <CustomFieldColumn key={column.key} field={column.field} value={issueDetail.custom_values?.[column.reference]} disabled={disableUserActions || column.readOnly || !updateIssue}
+          onSave={async (value) => { if (updateIssue && workspaceSlug) { await updateIssue(issueDetail.project_id, issueDetail.id, {custom_values:{[column.reference]:value}}); await authoritativeIssues.fetchIssue(workspaceSlug.toString(), issueDetail.project_id, issueDetail.id); } }} /> : <td key={column.key} className="text-placeholder">—</td>;
+        const property = (({assignees:"assignee",target_date:"due_date",created_at:"created_on",updated_at:"updated_on"} as Record<string,keyof IIssueDisplayProperties>)[column.reference] ?? column.reference) as keyof IIssueDisplayProperties;
+        return <IssueColumn key={column.key} property={property} displayProperties={{...displayProperties,[property]:true}} issueDetail={issueDetail} disableUserActions={disableUserActions} updateIssue={updateIssue} isEstimateEnabled={isEstimateEnabled}/>;
+      }) : spreadsheetColumnsList.map((property) => (
         <IssueColumn
           key={property}
           displayProperties={displayProperties}

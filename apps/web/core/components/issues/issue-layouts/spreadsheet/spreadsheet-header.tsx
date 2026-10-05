@@ -18,6 +18,7 @@ import type { TSelectionHelper } from "@/hooks/use-multiple-select";
 import { SpreadsheetHeaderColumn } from "./spreadsheet-header-column";
 
 interface Props {
+  resolvedColumns?: import("@/helpers/project-view-config").TResolvedViewColumn[];
   displayProperties: IIssueDisplayProperties;
   displayFilters: IIssueDisplayFilterOptions;
   handleDisplayFilterUpdate: (data: Partial<IIssueDisplayFilterOptions>) => void;
@@ -30,6 +31,7 @@ interface Props {
 
 export const SpreadsheetHeader = observer(function SpreadsheetHeader(props: Props) {
   const {
+    resolvedColumns,
     displayProperties,
     displayFilters,
     handleDisplayFilterUpdate,
@@ -71,12 +73,18 @@ export const SpreadsheetHeader = observer(function SpreadsheetHeader(props: Prop
                   />
                 </div>
               )}
-              <span className="text-13 font-medium">{`${isEpic ? "Epics" : "Work items"}`}</span>
+              <span className="text-13 font-medium">{resolvedColumns && resolvedColumns[0]?.title !== "name" ? resolvedColumns?.[0]?.title : `${isEpic ? "Epics" : "Work items"}`} </span>
             </div>
           </div>
         </th>
 
-        {spreadsheetColumnsList.map((property) => (
+        {resolvedColumns ? resolvedColumns.filter((c) => c.reference !== "name" && c.reference !== "identifier").map((column) => (
+          column.kind === "custom" ? <th key={column.key} className="h-11 min-w-36 border-r border-subtle bg-layer-1 px-3 text-left text-13">{column.title}</th> :
+          <SpreadsheetHeaderColumn key={column.key} title={column.title === column.reference ? undefined : column.title}
+            property={({assignees:"assignee",target_date:"due_date",created_at:"created_on",updated_at:"updated_on"} as Record<string,keyof IIssueDisplayProperties>)[column.reference] ?? column.reference as keyof IIssueDisplayProperties}
+            displayProperties={{...displayProperties, [({assignees:"assignee",target_date:"due_date",created_at:"created_on",updated_at:"updated_on"} as Record<string,string>)[column.reference] ?? column.reference]:true}}
+            displayFilters={displayFilters} handleDisplayFilterUpdate={handleDisplayFilterUpdate} isEstimateEnabled={isEstimateEnabled} isEpic={isEpic} />
+        )) : spreadsheetColumnsList.map((property) => (
           <SpreadsheetHeaderColumn
             key={property}
             property={property}
