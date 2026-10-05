@@ -1,6 +1,7 @@
 # Copyright (c) 2023-present Plane Software, Inc. and contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 import json
+from copy import deepcopy
 from uuid import UUID
 from django.db.models import Exists, OuterRef, Subquery, F, Value, CharField, Case, When
 from django.db.models.functions import Lower, Cast, Coalesce
@@ -66,17 +67,19 @@ def validate_custom_view(project, raw):
             reject("Configuration exceeds 32 KiB.")
     except (TypeError, ValueError, UnicodeEncodeError):
         reject("Configuration must be valid JSON.")
+    v2 = isinstance(raw, dict) and type(raw.get("version")) is int and raw["version"] == 2
     object_keys(
         raw,
-        {"version", "columns", "conditions", "sort", "group_by", "metrics"},
+        {"version", "columns", "conditions", "sort", "group_by", "metrics"} | ({"stages", "count_scopes"} if v2 else set()),
         {"version"},
     )
-    if type(raw["version"]) is not int or raw["version"] != 1:
+    if type(raw["version"]) is not int or raw["version"] not in (1, 2):
         reject("Unsupported version.")
     if project is None:
         reject("Custom configuration requires a project.")
+    raw = deepcopy(raw)
     result = {
-        "version": 1,
+        "version": raw["version"],
         "columns": raw.get("columns", []),
         "conditions": raw.get("conditions", []),
         "sort": raw.get("sort"),
@@ -89,18 +92,23 @@ def validate_custom_view(project, raw):
     ids = []
     columns = set()
     for column in result["columns"]:
-        object_keys(column, {"kind", "key", "field_id"}, {"kind"})
+        object_keys(column, {"kind", "key", "field_id"} | ({"alias"} if v2 else set()), {"kind"})
         if column["kind"] == "builtin":
             if (
-                set(column) != {"kind", "key"}
+                set(column) - ({"alias"} if v2 else set()) != {"kind", "key"}
                 or not isinstance(column.get("key"), str)
                 or column["key"] not in BUILTIN_COLUMNS
             ):
                 reject("Unknown built-in column.")
             key = ("builtin", column["key"])
         elif column["kind"] == "custom":
-            if set(column) != {"kind", "field_id"}:
+            if set(column) - ({"alias"} if v2 else set()) != {"kind", "field_id"}:
                 reject("Invalid custom column.")
+            if v2:
+                try:
+                    column["field_id"] = str(UUID(column["field_id"]))
+                except (ValueError, TypeError, AttributeError):
+                    reject("Invalid column field identifier.")
             ids.append(column["field_id"])
             key = ("custom", column["field_id"])
         else:
@@ -173,6 +181,10 @@ def validate_custom_view(project, raw):
     for metric in result["metrics"]:
         if fields[UUID(str(metric["field_id"]))].type not in ("currency", "number"):
             reject("Totals require a numeric field.")
+    if v2:
+        from .custom_view_config import validate_view_presentation
+        result.update(stages=raw.get("stages"), count_scopes=raw.get("count_scopes", []))
+        result = validate_view_presentation(project, result)
     return result
 
 
@@ -374,6 +386,8 @@ def aggregate_custom_fields(
             )
         )
     builtin_group = display_filters.get("group_by") if not group_field else None
+    if config.get("stages", {}) and config["stages"]["source"] == "state" and builtin_group != "state":
+        reject("Native stage presentation requires state grouping.")
     builtin_buckets = []
     builtin_path = None
     overlap = False
@@ -505,4 +519,29 @@ def aggregate_custom_fields(
                 "groups": groups,
             }
         )
-    return {"metrics": metrics, "groups_may_overlap": overlap}
+    response = {"metrics": metrics, "groups_may_overlap": overlap}
+    if config.get("version") == 2:
+        scopes = config.get("count_scopes", [])
+        count = lambda items: {"item_count": items.order_by().values("id").distinct().count()}
+        counts = {"scopes": {scope: count(sets[scope]) for scope in scopes}, "groups": []}
+        if group_field:
+            buckets = ([("false", "False"), ("true", "True"), ("unset", "Unset")] if group_field.type == "checkbox"
+                       else [(str(option.id), option.label) for option in group_field.options.all()] + [("unset", "Unset")])
+            for key, label in buckets:
+                counts["groups"].append({"key": key, "label": label, "scopes": {
+                    scope: count(sets[scope].annotate(**get_custom_group(group_field)).filter(custom_group=key)) for scope in scopes}})
+        elif builtin_path:
+            for key, label in builtin_buckets:
+                def bucket(items):
+                    items = items.filter(**{builtin_path + "__isnull": True}) if key == "unset" else items.filter(**{builtin_path: key})
+                    through = {"labels": "label_issue", "assignees": "issue_assignee", "module": "issue_module", "cycle": "issue_cycle"}.get(builtin_group)
+                    return items.filter(**{through + "__deleted_at__isnull": True}) if through else items
+                counts["groups"].append({"key": "None" if builtin_group == "state" and key == "unset" else key,
+                                         "label": label, "scopes": {scope: count(bucket(sets[scope])) for scope in scopes}})
+            if builtin_group == "state":
+                for metric in metrics:
+                    for group in metric["groups"]:
+                        if group["key"] == "unset":
+                            group["key"] = "None"
+        response["counts"] = counts
+    return response

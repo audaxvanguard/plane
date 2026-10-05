@@ -16,12 +16,22 @@ export type TCustomCondition = {
   value?: CustomValue;
 };
 export type TCustomMetricScope = "all" | "open" | "filtered";
-export type TProjectCustomViewConfig = {
+export type TProjectCustomViewConfigV1 = {
   version: 1; columns: TCustomViewColumn[]; conditions: TCustomCondition[];
   sort: { field_id: string; direction: "asc" | "desc" } | null;
   group_by: { field_id: string } | null;
   metrics: { field_id: string; scopes: TCustomMetricScope[] }[];
 };
+export type TCustomViewPresentationColumn = TCustomViewColumn & { alias?: string };
+export type TViewStagePresentation = {
+  source: "state" | "custom"; field_id?: string;
+  order: string[]; hidden: string[]; aliases: Record<string, string>;
+};
+export type TProjectCustomViewConfigV2 = Omit<TProjectCustomViewConfigV1, "version" | "columns"> & {
+  version: 2; columns: TCustomViewPresentationColumn[];
+  stages: TViewStagePresentation | null; count_scopes: TCustomMetricScope[];
+};
+export type TProjectCustomViewConfig = TProjectCustomViewConfigV1 | TProjectCustomViewConfigV2;
 export type TCustomAggregateScope = { total: string; item_count: number; valued_count: number; missing_count: number };
 export type TCustomFieldAggregates = {
   metrics: {
@@ -29,4 +39,8 @@ export type TCustomFieldAggregates = {
     groups: { key: string; label: string; scopes: Partial<Record<TCustomMetricScope, TCustomAggregateScope>> }[];
   }[];
   groups_may_overlap: boolean;
+  counts?: {
+    scopes: Partial<Record<TCustomMetricScope, { item_count: number }>>;
+    groups: { key: string; label: string; scopes: Partial<Record<TCustomMetricScope, { item_count: number }>> }[];
+  };
 };

@@ -82,6 +82,13 @@ class IssueViewSerializer(DynamicBaseSerializer):
             project = Project.objects.filter(id=view.kwargs['project_id'], workspace__slug=view.kwargs.get('slug')).first()
         return validate_custom_view(project, value)
 
+    def validate(self, attrs):
+        config = attrs.get('custom_view', self.instance.custom_view if self.instance else {})
+        display = attrs.get('display_filters', self.instance.display_filters if self.instance else {})
+        if config.get('stages') and config['stages']['source'] == 'state' and display.get('group_by') != 'state':
+            raise serializers.ValidationError({'custom_view': 'Native stage presentation requires state grouping.'})
+        return attrs
+
     def create(self, validated_data):
         query_params = validated_data.get("filters", {})
         if bool(query_params):

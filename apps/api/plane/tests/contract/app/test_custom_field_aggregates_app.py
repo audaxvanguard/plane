@@ -205,6 +205,45 @@ def test_overlapping_label_groups_do_not_multiply_overall(
     assert response.data["groups_may_overlap"] is True
 
 
+def test_count_only_empty_and_hidden_stages(crm_project, crm_admin, crm_admin_client, field_factory):
+    field = field_factory(crm_project, "checkbox")
+    raw = {"version": 2, "group_by": {"field_id": str(field.id)}, "count_scopes": ["all", "open", "filtered"],
+           "stages": {"source": "custom", "field_id": str(field.id), "order": [], "hidden": ["false", "true", "unset"], "aliases": {}}}
+    response = crm_admin_client.post(endpoint(crm_project), {"custom_view": raw}, format="json")
+    assert response.status_code == 200, response.data
+    assert response.data["counts"]["scopes"]["all"]["item_count"] == 0
+    assert {group["key"] for group in response.data["counts"]["groups"]} == {"false", "true", "unset"}
+    for flag in (False, True, None):
+        item = Issue.objects.create(project=crm_project, workspace=crm_project.workspace, name=str(flag))
+        if flag is not None:
+            apply_custom_values(item, {str(field.id): flag}, actor=crm_admin)
+    response = crm_admin_client.post(endpoint(crm_project), {"custom_view": raw}, format="json")
+    assert response.status_code == 200, response.data
+    assert response.data["counts"]["scopes"]["filtered"]["item_count"] == 3
+    assert all(group["scopes"]["all"]["item_count"] == 1 for group in response.data["counts"]["groups"])
+
+
+def test_native_hidden_stage_sum_and_count_match(crm_project, crm_admin, crm_admin_client, currency_field):
+    state = State.objects.create(project=crm_project, name="Active", group="started")
+    for state_value, value in ((state, "0.10"), (None, "-0.05")):
+        item = Issue.objects.create(project=crm_project, workspace=crm_project.workspace, state=state_value, name="Count")
+        if state_value is None:
+            # Issue.save assigns defaults; exercise a historical unassigned row.
+            Issue.objects.filter(id=item.id).update(state=None)
+        apply_custom_values(item, {str(currency_field.id): value}, actor=crm_admin)
+    raw = {**cfg(currency_field), "version": 2, "count_scopes": ["all"],
+           "stages": {"source": "state", "order": [str(state.id), "None"], "hidden": [str(state.id)], "aliases": {}}}
+    response = crm_admin_client.post(endpoint(crm_project), {"custom_view": raw, "display_filters": {"group_by": "state"}}, format="json")
+    assert response.status_code == 200, response.data
+    assert response.data["metrics"][0]["scopes"]["all"]["total"] == "0.05"
+    assert response.data["counts"]["scopes"]["all"]["item_count"] == 2
+    groups = {group["key"]: group for group in response.data["counts"]["groups"]}
+    assert groups[str(state.id)]["scopes"]["all"]["item_count"] == 1
+    assert groups["None"]["scopes"]["all"]["item_count"] == 1
+    invalid = crm_admin_client.post(endpoint(crm_project), {"custom_view": raw, "display_filters": {"group_by": "priority"}}, format="json")
+    assert invalid.status_code == 400, invalid.data
+
+
 def test_very_large_exact_totals(
     crm_project, crm_admin, crm_admin_client, currency_field
 ):

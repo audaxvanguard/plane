@@ -206,7 +206,7 @@ def test_valid_and_legacy_config(crm_project, currency_field):
 @pytest.mark.parametrize(
     "patch",
     [
-        {"version": 2},
+        {"version": 3},
         {"evil": "state__project__workspace__owner__password"},
         {"columns": [{"kind": "builtin", "key": "password"}]},
         {"conditions": [{"field_id": "bad", "operator": "eq", "value": "1"}]},
