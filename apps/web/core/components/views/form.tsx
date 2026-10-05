@@ -221,6 +221,8 @@ export const ProjectViewForm = observer(function ProjectViewForm(props: Props) {
                     render={({ field: { onChange: onDisplayPropertiesChange, value: displayProperties } }) => (
                       <FiltersDropdown title={t("common.display")}>
                         <DisplayFiltersSelection
+                          workspaceSlug={workspaceSlug}
+                          projectId={projectId}
                           layoutDisplayFiltersOptions={
                             ISSUE_DISPLAY_FILTERS_BY_PAGE.issues.layoutOptions[displayFilters.layout]
                           }

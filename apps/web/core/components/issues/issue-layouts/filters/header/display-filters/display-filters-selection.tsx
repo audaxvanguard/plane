@@ -7,6 +7,13 @@
 import React from "react";
 import { isEmpty } from "lodash-es";
 import { observer } from "mobx-react";
+import { useParams } from "next/navigation";
+import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
+import { useTranslation } from "@plane/i18n";
+import { Button } from "@plane/propel/button";
+import { useUserPermissions } from "@/hooks/store/user";
+import { useProjectCustomFieldDefinitions } from "@/hooks/use-project-custom-field-definitions";
+import { ViewPropertiesManager } from "@/components/views/configuration/properties-manager";
 import type {
   IIssueDisplayFilterOptions,
   IIssueDisplayProperties,
@@ -34,6 +41,8 @@ type Props = {
   moduleViewDisabled?: boolean;
   isEpic?: boolean;
   customFields?: TProjectCustomField[];
+  workspaceSlug?: string;
+  projectId?: string;
 };
 
 export const DisplayFiltersSelection = observer(function DisplayFiltersSelection(props: Props) {
@@ -47,8 +56,17 @@ export const DisplayFiltersSelection = observer(function DisplayFiltersSelection
     cycleViewDisabled = false,
     moduleViewDisabled = false,
     isEpic = false,
-    customFields = [],
   } = props;
+  const params = useParams();
+  const workspaceSlug = props.workspaceSlug ?? params.workspaceSlug?.toString();
+  const projectId = !isEpic ? props.projectId ?? params.projectId?.toString() : undefined;
+  const metadata = useProjectCustomFieldDefinitions(workspaceSlug, projectId);
+  const customFields = props.customFields ?? metadata.fields;
+  const { t } = useTranslation();
+  const { allowPermissions } = useUserPermissions();
+  const canManage = !!projectId && allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT, workspaceSlug, projectId);
+  const [manageOpen, setManageOpen] = React.useState(false);
+  React.useEffect(() => setManageOpen(false), [projectId, workspaceSlug]);
 
   const isDisplayFilterEnabled = (displayFilter: keyof IIssueDisplayFilterOptions) =>
     Object.keys(layoutDisplayFiltersOptions?.display_filters ?? {}).includes(displayFilter);
@@ -63,6 +81,16 @@ export const DisplayFiltersSelection = observer(function DisplayFiltersSelection
 
   return (
     <div className="vertical-scrollbar relative scrollbar-sm h-full w-full divide-y divide-subtle-1 overflow-hidden overflow-y-auto px-2.5">
+      {projectId && <div className="space-y-2 py-2">
+        {metadata.loading && <p role="status" className="text-11 text-secondary">{t("project_settings.custom_fields.loading")}</p>}
+        {metadata.error && <div role="alert" className="text-11 text-danger-primary">
+          {t("project_settings.custom_fields.load_error")}
+          <Button variant="secondary" size="sm" onClick={() => { void metadata.retry(); }}>{t("project_settings.custom_fields.retry")}</Button>
+        </div>}
+        {!metadata.loading && !metadata.error && customFields.length === 0 && <p className="text-11 text-secondary">{t("project_settings.custom_fields.empty")}</p>}
+        {canManage && <Button variant="secondary" size="sm" onClick={() => setManageOpen(true)}>{t("project_settings.custom_fields.manage_properties")}</Button>}
+        {manageOpen && workspaceSlug && <ViewPropertiesManager key={projectId} workspaceSlug={workspaceSlug} projectId={projectId} canManage={canManage} onClose={() => setManageOpen(false)} />}
+      </div>}
       {/* display properties */}
       {layoutDisplayFiltersOptions?.display_properties && layoutDisplayFiltersOptions.display_properties.length > 0 && (
         <div className="py-2">

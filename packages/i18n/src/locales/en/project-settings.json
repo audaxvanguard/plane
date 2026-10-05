@@ -1,6 +1,7 @@
 {
   "project_settings": {
     "custom_fields": {
+      "manage_properties": "Manage properties", "loading": "Loading properties…", "retry": "Retry", "close": "Close",
       "label": "Custom fields", "description": "Optional project fields for every work item. Currency values use BRL; field types cannot change after creation.",
       "unset": "Unset", "yes": "Yes", "no": "No", "retired": "retired", "unavailable_option": "Unavailable option",
       "save": "Save", "saving": "Saving…", "save_error": "Could not save. Your input has been retained.", "invalid_value": "Check the value and decimal precision.",

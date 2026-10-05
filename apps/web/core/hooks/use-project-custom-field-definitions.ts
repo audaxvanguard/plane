@@ -1,19 +1,23 @@
 // Copyright (c) 2023-present Plane Software, Inc. and contributors
 // SPDX-License-Identifier: AGPL-3.0-only
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useCustomFields } from "./use-custom-fields";
 
-/** Metadata is fetched once per mounted project surface, never once per card. */
+/** Shared project metadata/error state; never fetch once per card. */
 export function useProjectCustomFieldDefinitions(slug?: string, projectId?: string) {
   const store = useCustomFields();
-  const [error, setError] = useState(false);
   useEffect(() => {
-    let active = true;
-    setError(false);
-    if (slug && projectId && !store.fields[projectId] && !store.loading[projectId]) {
-      void store.fetchFields(slug, projectId).catch(() => { if (active) setError(true); });
+    if (slug && projectId && !store.fields[projectId] && !store.loading[projectId] && !store.errors[projectId]) {
+      void store.fetchFields(slug, projectId).catch(() => {});
     }
-    return () => { active = false; };
   }, [store, slug, projectId]);
-  return { fields: projectId ? store.getFields(projectId) : [], error };
+  const retry = async () => {
+    if (slug && projectId) await store.fetchFields(slug, projectId).catch(() => {});
+  };
+  return {
+    fields: projectId ? store.getFields(projectId) : [],
+    error: projectId ? !!store.errors[projectId] : false,
+    loading: projectId ? !!store.loading[projectId] : false,
+    retry,
+  };
 }
