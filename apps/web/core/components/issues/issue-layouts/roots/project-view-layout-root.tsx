@@ -67,7 +67,7 @@ export const ProjectViewLayoutRoot = observer(function ProjectViewLayoutRoot() {
         displayFilters: workItemFilters?.displayFilters,
         displayProperties: workItemFilters?.displayProperties,
         kanbanFilters: workItemFilters?.kanbanFilters,
-        richFilters: workItemFilters?.richFilters,
+        richFilters: workItemFilters?.richFilters ?? projectView.rich_filters,
       }
     : undefined;
 

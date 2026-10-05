@@ -64,6 +64,7 @@ export type TIssueExtraOptions = "show_empty_groups" | "sub_issue";
 
 export type TIssueParams =
   | "custom_view"
+  | "view_id"
   | "priority"
   | "state_group"
   | "state"
