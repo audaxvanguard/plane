@@ -142,13 +142,15 @@ def bounded_dockerfile(source):
                  'COPY deployments/audax/no-thp.c /tmp/no-thp.c\n'
                  'RUN cc -O2 -static -s /tmp/no-thp.c -o /audax-no-thp\n\n')
         source = source.replace('FROM ', tools + 'FROM ', 1)
-        source = source.replace('RUN pnpm turbo run build',
-                                'COPY --from=audax-build-tools /audax-no-thp /usr/local/bin/audax-no-thp\n'
-                                'RUN pnpm turbo run build')
+        source = re.sub(r'(FROM [^\n]+ AS installer\n)',
+                        r'\1COPY --from=audax-build-tools /audax-no-thp /usr/local/bin/audax-no-thp\n', source)
+        # Dependency fetch/install are Node processes too, before the compiler RUN.
+        source = source.replace('pnpm fetch', '/usr/local/bin/audax-no-thp pnpm fetch')
+        source = source.replace('pnpm install', '/usr/local/bin/audax-no-thp pnpm install')
     source = re.sub(r'pnpm turbo run build(?: --concurrency(?:=| )\d+)?',
                     '/usr/local/bin/audax-no-thp env NODE_OPTIONS=--max-old-space-size=2560 UV_THREADPOOL_SIZE=1 RAYON_NUM_THREADS=1 '
                     'pnpm turbo run build --concurrency=1', source)
-    source = source.replace('CI=true pnpm install', 'CI=true npm_config_child_concurrency=1 pnpm install')
+    source = source.replace('CI=true ', 'CI=true npm_config_child_concurrency=1 ')
     source = source.replace('pip install ', 'MAKEFLAGS=-j1 CARGO_BUILD_JOBS=1 pip install ')
     return source.replace('RUN xcaddy build', 'RUN GOMAXPROCS=1 GOFLAGS="-p=1" xcaddy build')
 

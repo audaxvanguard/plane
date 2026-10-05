@@ -46,6 +46,14 @@ class BuildSafetyTests(unittest.TestCase):
         self.assertTrue(bounded.endswith('FROM node AS runner\nCMD ["node", "app"]\n'))
         self.assertNotIn('transparent_hugepage', bounded)
 
+    def test_dependency_node_processes_disable_thp_before_fetch(self):
+        source = 'FROM node AS installer\nRUN --mount=type=cache,target=/pnpm/store pnpm fetch\nRUN CI=true pnpm install\nRUN pnpm turbo run build --filter=web\nFROM nginx AS production\nCMD ["nginx"]\n'
+        bounded = safety.bounded_dockerfile(source)
+        self.assertLess(bounded.index('COPY --from=audax-build-tools'), bounded.index('pnpm fetch'))
+        self.assertIn('target=/pnpm/store /usr/local/bin/audax-no-thp pnpm fetch', bounded)
+        self.assertIn('CI=true npm_config_child_concurrency=1 /usr/local/bin/audax-no-thp pnpm install', bounded)
+        self.assertTrue(bounded.endswith('FROM nginx AS production\nCMD ["nginx"]\n'))
+
     def test_thp_launcher_flag_survives_child_exec_and_propagates_exit(self):
         import tempfile
         import subprocess
