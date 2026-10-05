@@ -40,6 +40,7 @@ from plane.app.serializers import (
     IssueSerializer,
     ProjectUserPropertySerializer,
 )
+from plane.app.services.custom_fields import serialize_custom_values
 from plane.bgtasks.issue_activities_task import issue_activity
 from plane.bgtasks.issue_description_version_task import issue_description_version_task
 from plane.bgtasks.recent_visited_task import recent_visited_task
@@ -486,6 +487,7 @@ class IssueViewSet(BaseViewSet):
                 )
                 .first()
             )
+            issue["custom_values"] = serialize_custom_values(serializer.instance)
             datetime_fields = ["created_at", "updated_at"]
             issue = user_timezone_converter(issue, datetime_fields, request.user.user_timezone)
             # Send the model activity

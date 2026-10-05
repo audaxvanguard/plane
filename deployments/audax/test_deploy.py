@@ -30,6 +30,26 @@ class DeploymentTests(unittest.TestCase):
         self.assertEqual(len(images), 9)
         self.assertTrue(all(v.endswith(':abc123') for v in images.values()))
 
+    def _generated_dockerfile(self, target=None):
+        from unittest.mock import patch
+        files = []
+        def capture(command):
+            files.append(Path(command[command.index('-f') + 1]).read_text())
+        with patch.object(deploy.safety, 'guarded_run', side_effect=capture):
+            deploy.build_image('test-image', '.', 'apps/web/Dockerfile.web', 'test', target=target)
+        return files[0]
+
+    def test_typecheck_builds_dependencies_without_duplicate_app_bundle(self):
+        content = self._generated_dockerfile(target='installer')
+        self.assertIn('--filter=web^...', content)
+        self.assertIn('--concurrency=1', content)
+        self.assertIn('RAYON_NUM_THREADS=1', content)
+
+    def test_release_still_builds_the_full_web_application(self):
+        content = self._generated_dockerfile()
+        self.assertIn('--filter=web', content)
+        self.assertNotIn('--filter=web^...', content)
+
     def test_atomic_write_preserves_permissions(self):
         import tempfile
         with tempfile.TemporaryDirectory() as d:

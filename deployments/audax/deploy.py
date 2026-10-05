@@ -80,7 +80,14 @@ def prepare_builder():
 def build_image(image, context, dockerfile, tag, target=None):
     with tempfile.TemporaryDirectory(prefix='audax-safe-build-') as directory:
         bounded = Path(directory) / 'Dockerfile'
-        bounded.write_text(safety.bounded_dockerfile((ROOT / dockerfile).read_text()))
+        source = (ROOT / dockerfile).read_text()
+        if target == 'installer' and dockerfile == 'apps/web/Dockerfile.web':
+            # Typegen/tsc needs built workspace dependencies, not a second Vite bundle.
+            # Full release images still execute the unmodified application build.
+            source, count = re.subn(r'(pnpm turbo run build --filter=)web(?=\s|$)', r'\1web^...', source)
+            if count != 1:
+                raise ValueError('Expected exactly one web build command for dependency-only typecheck.')
+        bounded.write_text(safety.bounded_dockerfile(source))
         command = ['docker', 'buildx', 'build', '--builder', safety.BUILDER, '--load', '--progress=plain',
                    '--label', f'org.opencontainers.image.revision={tag}',
                    '--label', 'org.opencontainers.image.source=https://github.com/audaxvanguard/plane',

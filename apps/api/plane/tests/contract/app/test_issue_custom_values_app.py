@@ -26,6 +26,7 @@ def test_create_and_patch_values_with_omission_null(
         format="json",
     )
     assert created.status_code == 201, created.data
+    assert created.data.get("custom_values") == {key: "0.10"}
     issue = Issue.objects.get(name="CRM opportunity")
     assert serialize_custom_values(issue) == {key: "0.10"}
     detail_url = url(crm_project, f"{issue.id}/")
@@ -44,6 +45,18 @@ def test_create_and_patch_values_with_omission_null(
     )
     assert cleared.status_code == 204, cleared.data
     assert crm_admin_client.get(detail_url).data["custom_values"] == {}
+
+
+def test_create_response_keeps_false_and_zero(
+    crm_project, crm_admin_client, currency_field, field_factory, no_dispatch
+):
+    checkbox = field_factory(crm_project, "checkbox")
+    values = {str(currency_field.id): "0.00", str(checkbox.id): False}
+    response = crm_admin_client.post(
+        url(crm_project), {"name": "Zero and false", "custom_values": values}, format="json"
+    )
+    assert response.status_code == 201, response.data
+    assert response.data.get("custom_values") == values
 
 
 def test_same_project_copy_active_values(
