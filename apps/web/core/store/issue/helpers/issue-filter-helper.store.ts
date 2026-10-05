@@ -66,6 +66,8 @@ export interface IIssueFilterHelperStore {
   computedDisplayProperties(filters: IIssueDisplayProperties): IIssueDisplayProperties;
 }
 
+import { nativeCustomView, customGroupPage } from "@/helpers/custom-fields";
+
 export class IssueFilterHelperStore implements IIssueFilterHelperStore {
   // oxlint-disable-next-line no-useless-constructor
   constructor() {}
@@ -95,11 +97,11 @@ export class IssueFilterHelperStore implements IIssueFilterHelperStore {
     acceptableParamsByLayout: TIssueParams[]
   ): Partial<Record<TIssueParams, string | boolean>> => {
     const computedDisplayFilters: Partial<Record<TIssueParams, undefined | string[] | boolean | string>> = {
-      group_by: displayFilters?.group_by ? EIssueGroupByToServerOptions[displayFilters.group_by] : undefined,
+      group_by: displayFilters?.group_by ? (displayFilters.group_by.startsWith("custom_field:") ? "custom_group" : EIssueGroupByToServerOptions[displayFilters.group_by as keyof typeof EIssueGroupByToServerOptions]) : undefined,
       sub_group_by: displayFilters?.sub_group_by
-        ? EIssueGroupByToServerOptions[displayFilters.sub_group_by]
+        ? EIssueGroupByToServerOptions[displayFilters.sub_group_by as keyof typeof EIssueGroupByToServerOptions]
         : undefined,
-      order_by: displayFilters?.order_by || undefined,
+      order_by: displayFilters?.order_by?.startsWith("custom_field:") ? "-created_at" : displayFilters?.order_by || undefined,
       sub_issue: displayFilters?.sub_issue ?? true,
     };
 
@@ -113,6 +115,9 @@ export class IssueFilterHelperStore implements IIssueFilterHelperStore {
           ? nonEmptyArrayValue.join(",")
           : nonEmptyArrayValue;
     });
+
+    const customConfig = nativeCustomView(["list", "kanban"].includes(displayFilters?.layout) ? displayFilters?.group_by : undefined, displayFilters?.order_by);
+    if (customConfig) issueFiltersParams.custom_view = JSON.stringify(customConfig);
 
     // work item filters
     if (richFilters) issueFiltersParams.filters = JSON.stringify(richFilters);
@@ -328,7 +333,9 @@ export class IssueFilterHelperStore implements IIssueFilterHelperStore {
       const groupBy = paginationParams["group_by"] as EIssueGroupByToServerOptions | undefined;
       delete paginationParams["group_by"];
 
-      if (groupBy) {
+      if (String(groupBy) === "custom_group" && typeof paginationParams.custom_view === "string") {
+        paginationParams.custom_view = JSON.stringify(customGroupPage(JSON.parse(paginationParams.custom_view), groupId));
+      } else if (groupBy) {
         const groupByFilterOption = EServerGroupByToFilterOptions[groupBy];
         paginationParams[groupByFilterOption] = groupId;
       }

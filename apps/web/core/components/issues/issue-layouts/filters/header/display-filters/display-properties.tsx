@@ -11,7 +11,7 @@ import { ISSUE_DISPLAY_PROPERTIES } from "@plane/constants";
 // plane i18n
 import { useTranslation } from "@plane/i18n";
 // types
-import type { IIssueDisplayProperties } from "@plane/types";
+import type { IIssueDisplayProperties, TProjectCustomField } from "@plane/types";
 // components
 import { FilterHeader } from "../helpers/filter-header";
 
@@ -22,6 +22,7 @@ type Props = {
   cycleViewDisabled?: boolean;
   moduleViewDisabled?: boolean;
   isEpic?: boolean;
+  customFields?: TProjectCustomField[];
 };
 
 export const FilterDisplayProperties = observer(function FilterDisplayProperties(props: Props) {
@@ -32,6 +33,7 @@ export const FilterDisplayProperties = observer(function FilterDisplayProperties
     cycleViewDisabled = false,
     moduleViewDisabled = false,
     isEpic = false,
+    customFields = [],
   } = props;
   // hooks
   const { t } = useTranslation();
@@ -66,6 +68,14 @@ export const FilterDisplayProperties = observer(function FilterDisplayProperties
       />
       {previewEnabled && (
         <div className="mt-1 flex flex-wrap items-center gap-2">
+          {customFields.filter((field) => !field.is_archived || displayProperties.custom_fields?.includes(field.id)).map((field) => (
+            <button key={field.id} type="button" aria-pressed={displayProperties.custom_fields?.includes(field.id) ?? false}
+              className={`rounded-sm border px-2 py-0.5 text-11 transition-all ${displayProperties.custom_fields?.includes(field.id) ? "border-accent-strong bg-accent-primary text-on-color" : "border-subtle hover:bg-layer-1"}`}
+              onClick={() => handleUpdate({ custom_fields: displayProperties.custom_fields?.includes(field.id)
+                ? displayProperties.custom_fields.filter((id) => id !== field.id) : [...(displayProperties.custom_fields ?? []), field.id] })}>
+              {field.name}{field.is_archived ? ` (${t("project_settings.custom_fields.archived")})` : ""}
+            </button>
+          ))}
           {filteredDisplayProperties.map((displayProperty) => (
             <>
               <button

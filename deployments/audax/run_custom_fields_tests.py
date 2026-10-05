@@ -138,6 +138,9 @@ def run_native_browser(args):
         shutil.copy(script, work / 'run.mjs')
         env = {**os.environ, 'SOURCE_ROOT': str(ROOT), 'CHROME_PATH': os.environ.get('CF_CHROME', '/usr/bin/google-chrome'),
                'NODE_OPTIONS': '--max-old-space-size=256',
+               # Match pnpm's existing React 19 + RHF 7.51 catalog without
+               # changing app dependencies or npm's global configuration.
+               'npm_config_legacy_peer_deps': 'true',
                'PATH': str(Path(node).parent) + ':' + os.environ.get('PATH', '')}
         previous_cwd = Path.cwd()
         previous_env = dict(os.environ)

@@ -12,6 +12,7 @@ import type {
   IIssueDisplayProperties,
   ILayoutDisplayFiltersOptions,
   TIssueGroupByOptions,
+  TProjectCustomField,
 } from "@plane/types";
 // components
 import {
@@ -32,6 +33,7 @@ type Props = {
   cycleViewDisabled?: boolean;
   moduleViewDisabled?: boolean;
   isEpic?: boolean;
+  customFields?: TProjectCustomField[];
 };
 
 export const DisplayFiltersSelection = observer(function DisplayFiltersSelection(props: Props) {
@@ -45,6 +47,7 @@ export const DisplayFiltersSelection = observer(function DisplayFiltersSelection
     cycleViewDisabled = false,
     moduleViewDisabled = false,
     isEpic = false,
+    customFields = [],
   } = props;
 
   const isDisplayFilterEnabled = (displayFilter: keyof IIssueDisplayFilterOptions) =>
@@ -64,6 +67,7 @@ export const DisplayFiltersSelection = observer(function DisplayFiltersSelection
       {layoutDisplayFiltersOptions?.display_properties && layoutDisplayFiltersOptions.display_properties.length > 0 && (
         <div className="py-2">
           <FilterDisplayProperties
+            customFields={customFields}
             displayProperties={displayProperties}
             displayPropertiesToRender={layoutDisplayFiltersOptions.display_properties}
             handleUpdate={handleDisplayPropertiesUpdate}
@@ -78,11 +82,13 @@ export const DisplayFiltersSelection = observer(function DisplayFiltersSelection
       {isDisplayFilterEnabled("group_by") && (
         <div className="py-2">
           <FilterGroupBy
+            customFields={customFields}
             displayFilters={displayFilters}
             groupByOptions={layoutDisplayFiltersOptions?.display_filters.group_by ?? []}
             handleUpdate={(val) =>
               handleDisplayFiltersUpdate({
                 group_by: val,
+                ...(val?.startsWith("custom_field:") ? { sub_group_by: null } : {}),
               })
             }
             ignoreGroupedFilters={[...ignoreGroupedFilters, ...computedIgnoreGroupedFilters]}
@@ -93,6 +99,7 @@ export const DisplayFiltersSelection = observer(function DisplayFiltersSelection
       {/* sub-group by */}
       {isDisplayFilterEnabled("sub_group_by") &&
         displayFilters?.group_by !== null &&
+        !displayFilters?.group_by?.startsWith("custom_field:") &&
         displayFilters?.layout === "kanban" && (
           <div className="py-2">
             <FilterSubGroupBy
@@ -112,6 +119,7 @@ export const DisplayFiltersSelection = observer(function DisplayFiltersSelection
       {isDisplayFilterEnabled("order_by") && !isEmpty(layoutDisplayFiltersOptions?.display_filters?.order_by) && (
         <div className="py-2">
           <FilterOrderBy
+            customFields={customFields}
             selectedOrderBy={displayFilters?.order_by}
             handleUpdate={(val) =>
               handleDisplayFiltersUpdate({

@@ -47,6 +47,10 @@ import { usePlatformOS } from "@/hooks/use-platform-os";
 import { useProjectIssueProperties } from "@/hooks/use-project-issue-properties";
 import { useUser } from "@/hooks/store/user";
 import { IssueFormOptionalTimes } from "./components/optional-times";
+import { IssueFormCustomFields } from "../custom-fields/form";
+import { ConfirmCustomFieldProjectChange } from "../custom-fields/project-change";
+import { useCustomFields } from "@/hooks/use-custom-fields";
+import { hasCustomValues, pickDirtyCustomValues } from "@/helpers/custom-fields";
 
 const DEFAULT_OPTIONAL_TIMES = { start_time: null, target_time: null };
 
@@ -102,6 +106,10 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
   // states
   const [gptAssistantModal, setGptAssistantModal] = useState(false);
   const [isMoving, setIsMoving] = useState<boolean>(false);
+  const [customFieldError, setCustomFieldError] = useState(false);
+  const [requestedProject, setRequestedProject] = useState<string | null>(null);
+  const confirmedCustomProjectClear = useRef(false);
+  const customFieldStore = useCustomFields();
 
   // refs
   const editorRef = useRef<EditorRefApi>(null);
@@ -154,6 +162,13 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
   } = methods;
 
   const projectId = watch("project_id");
+  useEffect(() => {
+    let active = true;
+    setCustomFieldError(false);
+    if (workspaceSlug && projectId) void customFieldStore.fetchFields(workspaceSlug.toString(), projectId)
+      .catch(() => { if (active) setCustomFieldError(true); });
+    return () => { active = false; };
+  }, [customFieldStore, workspaceSlug, projectId]);
   const activeAdditionalPropertiesLength = getActiveAdditionalPropertiesLength({
     projectId: projectId,
     workspaceSlug: workspaceSlug?.toString(),
@@ -249,12 +264,18 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
           type_id: getValues<"type_id">("type_id"),
         };
 
+    if (data?.id && dirtyFields.custom_values) {
+      submitData.custom_values = pickDirtyCustomValues(formData.custom_values, dirtyFields.custom_values);
+    }
+    if (confirmedCustomProjectClear.current) Object.assign(submitData, { confirm_clear_custom_values: true });
+
     // this condition helps to move the issues from draft to project issues
     if (formData.hasOwnProperty("is_draft")) submitData.is_draft = formData.is_draft;
 
     await onSubmit(submitData, is_draft_issue)
       .then(() => {
         setGptAssistantModal(false);
+        confirmedCustomProjectClear.current = false;
         if (isCreateMoreToggleEnabled && workItemTemplateId) {
           handleTemplateChange({
             workspaceSlug: workspaceSlug?.toString(),
@@ -311,7 +332,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
   const handleFormChange = () => {
     if (!onChange) return;
 
-    if (isDirty && condition) onChange(watch());
+    if (isDirty && condition) onChange(Object.assign({}, watch(), confirmedCustomProjectClear.current ? { confirm_clear_custom_values: true } : {}));
     else onChange(null);
   };
 
@@ -339,7 +360,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
   useEffect(() => {
     if (!onChange) return;
 
-    if (isDirty && condition) onChange(watch());
+    if (isDirty && condition) onChange(Object.assign({}, watch(), confirmedCustomProjectClear.current ? { confirm_clear_custom_values: true } : {}));
     else onChange(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDirty]);
@@ -363,6 +384,14 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
 
   return (
     <FormProvider {...methods}>
+      <ConfirmCustomFieldProjectChange open={requestedProject !== null} onCancel={() => setRequestedProject(null)} onConfirm={() => {
+        if (!requestedProject) return;
+        confirmedCustomProjectClear.current = true;
+        setValue("custom_values", {}, { shouldDirty: true });
+        setValue("project_id", requestedProject, { shouldDirty: true });
+        setRequestedProject(null);
+        handleFormChange();
+      }} />
       <div className="flex gap-2 bg-transparent">
         <div className="w-full rounded-lg">
           <form
@@ -378,6 +407,13 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                     control={control}
                     disabled={!!data?.id || !!data?.sourceIssueId || isProjectSelectionDisabled}
                     handleFormChange={handleFormChange}
+                    onBeforeChange={(next) => {
+                      if (!next) return false;
+                      if (next !== projectId && hasCustomValues(getValues("custom_values"))) {
+                        setRequestedProject(next); return false;
+                      }
+                      return true;
+                    }}
                   />
                 </div>
               </div>
@@ -451,6 +487,8 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                   setSelectedParentIssue={setSelectedParentIssue}
                 />
                 <IssueFormOptionalTimes timeZone={timeZone} disabled={isDisabled} onChange={handleFormChange} />
+                {customFieldError && <p role="alert" className="mt-2 text-body-xs-regular text-danger-primary">{t("project_settings.custom_fields.load_error")}</p>}
+                <IssueFormCustomFields fields={customFieldStore.getFields(projectId)} disabled={isDisabled} onChange={handleFormChange} />
               </div>
               {showActionButtons && (
                 <div

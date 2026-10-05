@@ -117,6 +117,7 @@ export interface ViewFlags {
 }
 
 export type GroupByColumnTypes =
+  | `custom_field:${string}`
   | "project"
   | "cycle"
   | "module"

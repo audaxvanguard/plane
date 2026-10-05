@@ -8,7 +8,8 @@ import React, { useState } from "react";
 import { observer } from "mobx-react";
 import { ISSUE_ORDER_BY_OPTIONS } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
-import type { TIssueOrderByOptions } from "@plane/types";
+import type { TIssueOrderByOptions, TProjectCustomField } from "@plane/types";
+import { CustomFieldSortOptions } from "@/components/issues/custom-fields/view-options";
 
 // components
 import { FilterHeader, FilterOption } from "@/components/issues/issue-layouts/filters";
@@ -17,10 +18,11 @@ type Props = {
   selectedOrderBy: TIssueOrderByOptions | undefined;
   handleUpdate: (val: TIssueOrderByOptions) => void;
   orderByOptions: TIssueOrderByOptions[];
+  customFields?: TProjectCustomField[];
 };
 
 export const FilterOrderBy = observer(function FilterOrderBy(props: Props) {
-  const { selectedOrderBy, handleUpdate, orderByOptions } = props;
+  const { selectedOrderBy, handleUpdate, orderByOptions, customFields = [] } = props;
   // hooks
   const { t } = useTranslation();
 
@@ -37,6 +39,7 @@ export const FilterOrderBy = observer(function FilterOrderBy(props: Props) {
       />
       {previewEnabled && (
         <div>
+          <CustomFieldSortOptions fields={customFields} selected={activeOrderBy} onChange={handleUpdate} />
           {ISSUE_ORDER_BY_OPTIONS.filter((option) => orderByOptions.includes(option.key)).map((orderBy) => (
             <FilterOption
               key={orderBy?.key}

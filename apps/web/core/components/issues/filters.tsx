@@ -15,6 +15,7 @@ import type { IIssueDisplayFilterOptions, IIssueDisplayProperties } from "@plane
 import { EIssueLayoutTypes, EIssuesStoreType } from "@plane/types";
 // hooks
 import { useIssues } from "@/hooks/store/use-issues";
+import { useProjectCustomFieldDefinitions } from "@/hooks/use-project-custom-field-definitions";
 // plane web imports
 import type { TProject } from "@plane/types";
 // local imports
@@ -52,6 +53,7 @@ export const HeaderFilters = observer(function HeaderFilters(props: Props) {
   } = props;
   // i18n
   const { t } = useTranslation();
+  const { fields: customFields } = useProjectCustomFieldDefinitions(storeType === EIssuesStoreType.PROJECT ? workspaceSlug : undefined, projectId);
   // states
   const [analyticsModal, setAnalyticsModal] = useState(false);
   // store hooks
@@ -115,6 +117,7 @@ export const HeaderFilters = observer(function HeaderFilters(props: Props) {
         placement="bottom-end"
       >
         <DisplayFiltersSelection
+          customFields={storeType === EIssuesStoreType.PROJECT ? customFields : []}
           layoutDisplayFiltersOptions={layoutDisplayFiltersOptions}
           displayFilters={issueFilters?.displayFilters ?? {}}
           handleDisplayFiltersUpdate={handleDisplayFilters}

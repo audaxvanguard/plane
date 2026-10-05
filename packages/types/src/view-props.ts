@@ -12,6 +12,7 @@ import type { CompleteOrEmpty } from "./utils";
 export type TIssueLayouts = "list" | "kanban" | "calendar" | "spreadsheet" | "gantt_chart";
 
 export type TIssueGroupByOptions =
+  | `custom_field:${string}`
   | "state"
   | "priority"
   | "labels"
@@ -26,6 +27,7 @@ export type TIssueGroupByOptions =
   | null;
 
 export type TIssueOrderByOptions =
+  | `custom_field:${string}:${"asc" | "desc"}`
   | "-created_at"
   | "created_at"
   | "updated_at"
@@ -61,6 +63,7 @@ export type TIssueGroupingFilters = "active" | "backlog";
 export type TIssueExtraOptions = "show_empty_groups" | "sub_issue";
 
 export type TIssueParams =
+  | "custom_view"
   | "priority"
   | "state_group"
   | "state"
@@ -159,6 +162,8 @@ export interface IIssueDisplayFilterOptions {
   sub_issue?: boolean;
 }
 export interface IIssueDisplayProperties {
+  /** Ordered, opt-in project custom properties for cards/list rows. */
+  custom_fields?: string[];
   assignee?: boolean;
   start_date?: boolean;
   due_date?: boolean;

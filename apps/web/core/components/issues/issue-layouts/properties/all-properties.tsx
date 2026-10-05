@@ -45,6 +45,8 @@ import { usePlatformOS } from "@/hooks/use-platform-os";
 // local components
 import { IssuePropertyLabels } from "./labels";
 import { WithDisplayPropertiesHOC } from "./with-display-properties-HOC";
+import { useCustomFields } from "@/hooks/use-custom-fields";
+import { CustomFieldChips } from "@/components/issues/custom-fields/editor";
 
 export interface IIssueProperties {
   issue: TIssue;
@@ -60,6 +62,7 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
   const { issue, updateIssue, displayProperties, isReadOnly, className, isEpic = false } = props;
   // i18n
   const { t } = useTranslation();
+  const customFields = useCustomFields();
   // store hooks
   const { getProjectById } = useProject();
   const { labelMap } = useLabel();
@@ -196,6 +199,7 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
 
   return (
     <div className={className}>
+      <CustomFieldChips fields={customFields.getFields(issue.project_id)} selected={displayProperties.custom_fields} values={issue.custom_values} />
       {/* basic properties */}
       {/* state */}
       <WithDisplayPropertiesHOC displayProperties={displayProperties} displayPropertyKey="state">

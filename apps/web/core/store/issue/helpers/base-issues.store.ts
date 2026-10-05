@@ -112,6 +112,8 @@ export interface IBaseIssuesStore {
 }
 
 // This constant maps the group by keys to the respective issue property that the key relies on
+import { customGroupValue } from "@/helpers/custom-fields";
+
 export const ISSUE_GROUP_BY_KEY: Record<TIssueDisplayFilterOptions, keyof TIssue> = {
   project: "project_id",
   state: "state_id",
@@ -332,6 +334,7 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
     const orderBy = this.orderBy;
     if (!orderBy) return;
 
+    if (orderBy.startsWith("custom_field:")) return "custom_values";
     return ISSUE_ORDERBY_KEY[orderBy];
   }
 
@@ -341,6 +344,7 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
 
     if (!groupBy) return;
 
+    if (groupBy.startsWith("custom_field:")) return "custom_values";
     return ISSUE_GROUP_BY_KEY[groupBy];
   }
 
@@ -1607,7 +1611,7 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
     const issueGroupKey = issue?.[this.issueGroupKey] as string | string[] | null | undefined;
     // if they are grouped then identify the paths based on props on which group by is dependent on
     const issueKeyActions: { path: string[]; action: EIssueGroupedAction.REORDER }[] = [];
-    const groupByValues = this.getArrayStringArray(issue, issueGroupKey);
+    const groupByValues = this.getArrayStringArray(issue, issueGroupKey, this.groupBy);
 
     // if issues are not subGrouped then, provide path from groupByValues
     if (!this.issueSubGroupKey) {
@@ -1620,7 +1624,7 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
 
     const issueSubGroupKey = issue?.[this.issueSubGroupKey] as string | string[] | null | undefined;
     // if they are grouped then identify the paths based on props on which sub group by is dependent on
-    const subGroupByValues = this.getArrayStringArray(issue, issueSubGroupKey);
+    const subGroupByValues = this.getArrayStringArray(issue, issueSubGroupKey, this.subGroupBy);
 
     // if issues are subGrouped then, provide path from subGroupByValues
     for (const groupKey of groupByValues) {
@@ -1646,6 +1650,7 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
   ): string[] => {
     // if issue object is undefined return empty array
     if (!issueObject) return [];
+    if (groupByKey?.startsWith("custom_field:")) return [customGroupValue(issueObject.custom_values, groupByKey.slice("custom_field:".length))];
     // if value is not defined, return None value in array
     if (!value || isEmpty(value)) return ["None"];
     // if array return the array

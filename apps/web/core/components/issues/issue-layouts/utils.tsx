@@ -104,8 +104,11 @@ export const isWorkspaceLevel = (type: EIssuesStoreType) =>
     ? true
     : false;
 
+import { customGroupColumns } from "@/helpers/custom-fields";
+
 type TGetGroupByColumns = {
   groupBy: GroupByColumnTypes | null;
+  translate?: (key: string) => string;
   includeNone: boolean;
   isWorkspaceLevel: boolean;
   isEpic?: boolean;
@@ -117,6 +120,7 @@ type TGetGroupByColumns = {
 // It can break the includeNone logic if not handled properly.
 export const getGroupByColumns = ({
   groupBy,
+  translate,
   includeNone,
   isWorkspaceLevel,
   isEpic = false,
@@ -136,6 +140,15 @@ export const getGroupByColumns = ({
 
   // Return undefined if no valid groupBy
   if (!groupBy) return undefined;
+
+  if (groupBy.startsWith("custom_field:")) {
+    const id = groupBy.slice("custom_field:".length);
+    const currentProjectId = projectId ?? store.projectRoot.project.currentProjectDetails?.id;
+    if (!currentProjectId) return undefined;
+    const field = store.customFields.getFields(currentProjectId).find((field) => field.id === id);
+    if (!field) return undefined;
+    return customGroupColumns(field, (key) => translate?.("project_settings.custom_fields." + key) ?? key);
+  }
 
   // Map of group by options to their corresponding column getter functions
   const groupByColumnMap: Record<

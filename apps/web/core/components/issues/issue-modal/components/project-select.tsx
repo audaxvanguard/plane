@@ -23,10 +23,11 @@ type TIssueProjectSelectProps = {
   control: Control<TIssue>;
   disabled?: boolean;
   handleFormChange: () => void;
+  onBeforeChange?: (projectId: string | null) => boolean;
 };
 
 export const IssueProjectSelect = observer(function IssueProjectSelect(props: TIssueProjectSelectProps) {
-  const { control, disabled = false, handleFormChange } = props;
+  const { control, disabled = false, handleFormChange, onBeforeChange } = props;
   // store hooks
   const { isMobile } = usePlatformOS();
   // context hooks
@@ -46,6 +47,7 @@ export const IssueProjectSelect = observer(function IssueProjectSelect(props: TI
           <ProjectDropdown
             value={value}
             onChange={(projectId) => {
+              if (onBeforeChange && !onBeforeChange(projectId)) return;
               onChange(projectId);
               handleFormChange();
             }}

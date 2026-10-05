@@ -7,7 +7,8 @@
 import React, { useState } from "react";
 import { observer } from "mobx-react";
 import { useTranslation } from "@plane/i18n";
-import type { IIssueDisplayFilterOptions, TIssueGroupByOptions } from "@plane/types";
+import type { IIssueDisplayFilterOptions, TIssueGroupByOptions, TProjectCustomField } from "@plane/types";
+import { CustomFieldGroupOptions } from "@/components/issues/custom-fields/view-options";
 // helpers
 import { useGroupByOptions } from "../../../utils";
 // components
@@ -18,10 +19,11 @@ type Props = {
   groupByOptions: TIssueGroupByOptions[];
   handleUpdate: (val: TIssueGroupByOptions) => void;
   ignoreGroupedFilters: Partial<TIssueGroupByOptions>[];
+  customFields?: TProjectCustomField[];
 };
 
 export const FilterGroupBy = observer(function FilterGroupBy(props: Props) {
-  const { displayFilters, groupByOptions, handleUpdate, ignoreGroupedFilters } = props;
+  const { displayFilters, groupByOptions, handleUpdate, ignoreGroupedFilters, customFields = [] } = props;
   // hooks
   const { t } = useTranslation();
   const [previewEnabled, setPreviewEnabled] = useState(true);
@@ -40,6 +42,7 @@ export const FilterGroupBy = observer(function FilterGroupBy(props: Props) {
       />
       {previewEnabled && (
         <div>
+          <CustomFieldGroupOptions fields={customFields} selected={selectedGroupBy} onChange={handleUpdate} />
           {options.map((groupBy) => {
             if (
               displayFilters?.layout === "kanban" &&

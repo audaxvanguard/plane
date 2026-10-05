@@ -6,6 +6,7 @@
 
 import type { MutableRefObject } from "react";
 import { observer } from "mobx-react";
+import { useTranslation } from "@plane/i18n";
 import type {
   GroupByColumnTypes,
   IGroupByColumn,
@@ -98,6 +99,7 @@ export const KanBan = observer(function KanBan(props: IKanBan) {
     isEpic = false,
   } = props;
   // i18n
+  const { t } = useTranslation();
   // store hooks
   const storeType = useIssueStoreType();
   const issueKanBanView = useKanbanView();
@@ -108,6 +110,7 @@ export const KanBan = observer(function KanBan(props: IKanBan) {
 
   const list = getGroupByColumns({
     groupBy: group_by as GroupByColumnTypes,
+    translate: t,
     includeNone: true,
     isWorkspaceLevel: isWorkspaceLevel(storeType),
     isEpic: isEpic,

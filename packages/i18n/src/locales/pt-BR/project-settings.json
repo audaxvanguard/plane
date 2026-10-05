@@ -1,6 +1,16 @@
 {
   "project_settings": {
-    "custom_fields": { "label": "Campos personalizados", "description": "Campos opcionais do projeto para todos os itens de trabalho." },
+    "custom_fields": {
+      "label": "Campos personalizados", "description": "Campos opcionais para todos os itens de trabalho do projeto. Valores monetários usam BRL; o tipo não pode ser alterado após a criação.",
+      "unset": "Não definido", "yes": "Sim", "no": "Não", "retired": "desativada", "unavailable_option": "Opção indisponível",
+      "save": "Salvar", "saving": "Salvando…", "save_error": "Não foi possível salvar. O valor digitado foi mantido.", "invalid_value": "Confira o valor e a precisão decimal.",
+      "archived_read_only": "Campo arquivado — somente leitura", "field_name": "Nome do campo", "field_type": "Tipo do campo", "create": "Criar campo",
+      "archive": "Arquivar", "restore": "Restaurar", "archived": "Arquivado", "field_description": "Descrição", "order": "Ordem", "save_definition": "Salvar alterações",
+      "options": "Opções", "new_option": "Nova opção", "add_option": "Adicionar opção", "save_option": "Salvar opção", "retire_option": "Desativar opção", "restore_option": "Restaurar opção", "color": "Cor",
+      "settings_error": "Não foi possível salvar. Confira o nome, os limites e as permissões; os dados digitados foram mantidos.", "load_error": "Não foi possível carregar os campos personalizados.",
+      "ascending": "Crescente", "descending": "Decrescente", "change_project": "Trocar de projeto", "cancel": "Cancelar", "continue": "Continuar", "project_change": "Ao trocar de projeto, os valores dos campos personalizados serão apagados. Continuar?", "empty": "Nenhum campo personalizado", "empty_description": "Crie um campo para registrar informações adicionais nos itens de trabalho deste projeto.",
+      "types": { "text": "Texto", "number": "Número", "currency": "Moeda (BRL)", "date": "Data", "checkbox": "Caixa de seleção", "select": "Seleção única" }
+    },
     "general": {
       "enter_project_id": "Inserir ID do projeto",
       "please_select_a_timezone": "Por favor, selecione um fuso horário",

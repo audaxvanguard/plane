@@ -1,6 +1,16 @@
 {
   "project_settings": {
-    "custom_fields": { "label": "Custom fields", "description": "Optional project fields for every work item." },
+    "custom_fields": {
+      "label": "Custom fields", "description": "Optional project fields for every work item. Currency values use BRL; field types cannot change after creation.",
+      "unset": "Unset", "yes": "Yes", "no": "No", "retired": "retired", "unavailable_option": "Unavailable option",
+      "save": "Save", "saving": "Saving…", "save_error": "Could not save. Your input has been retained.", "invalid_value": "Check the value and decimal precision.",
+      "archived_read_only": "Archived field — read only", "field_name": "Field name", "field_type": "Field type", "create": "Create field",
+      "archive": "Archive", "restore": "Restore", "archived": "Archived", "field_description": "Description", "order": "Order", "save_definition": "Save changes",
+      "options": "Options", "new_option": "New option", "add_option": "Add option", "save_option": "Save option", "retire_option": "Retire option", "restore_option": "Restore option", "color": "Color",
+      "settings_error": "Could not save. Check the name, limits and permissions; your input is retained.", "load_error": "Could not load custom fields.",
+      "ascending": "Ascending", "descending": "Descending", "change_project": "Change project", "cancel": "Cancel", "continue": "Continue", "project_change": "Changing project clears its custom-field values. Continue?", "empty": "No custom fields yet", "empty_description": "Create a field to capture extra information on this project’s work items.",
+      "types": { "text": "Text", "number": "Number", "currency": "Currency (BRL)", "date": "Date", "checkbox": "Checkbox", "select": "Single select" }
+    },
     "general": {
       "enter_project_id": "Enter project ID",
       "please_select_a_timezone": "Please select a timezone",
