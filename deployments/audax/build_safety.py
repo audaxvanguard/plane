@@ -110,7 +110,7 @@ def guarded_run(command):
 def bounded_dockerfile(source):
     # Only build commands change; final runtime ENV/CMD remain untouched.
     source = re.sub(r'pnpm turbo run build(?: --concurrency(?:=| )\d+)?',
-                    'NODE_OPTIONS=--max-old-space-size=2560 UV_THREADPOOL_SIZE=1 '
+                    'NODE_OPTIONS=--max-old-space-size=2560 UV_THREADPOOL_SIZE=1 RAYON_NUM_THREADS=1 '
                     'pnpm turbo run build --concurrency=1', source)
     source = source.replace('CI=true pnpm install', 'CI=true npm_config_child_concurrency=1 pnpm install')
     source = source.replace('pip install ', 'MAKEFLAGS=-j1 CARGO_BUILD_JOBS=1 pip install ')

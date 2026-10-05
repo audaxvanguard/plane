@@ -33,6 +33,7 @@ class BuildSafetyTests(unittest.TestCase):
         source = 'FROM node AS installer\nRUN pnpm turbo run build --filter=web\nFROM node AS runner\nCMD ["node", "app"]\n'
         bounded = safety.bounded_dockerfile(source)
         self.assertIn('--concurrency=1', bounded)
+        self.assertIn('RAYON_NUM_THREADS=1', bounded)
         self.assertIn('--max-old-space-size=2560', bounded)
         self.assertNotIn('ENV NODE_OPTIONS', bounded)
         self.assertTrue(bounded.endswith('FROM node AS runner\nCMD ["node", "app"]\n'))
