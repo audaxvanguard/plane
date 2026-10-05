@@ -38,6 +38,28 @@ class BuildSafetyTests(unittest.TestCase):
         self.assertNotIn('ENV NODE_OPTIONS', bounded)
         self.assertTrue(bounded.endswith('FROM node AS runner\nCMD ["node", "app"]\n'))
 
+    def test_compilers_disable_thp_without_changing_runtime(self):
+        source = 'FROM node AS installer\nRUN pnpm turbo run build --filter=web\nFROM node AS runner\nCMD ["node", "app"]\n'
+        bounded = safety.bounded_dockerfile(source)
+        self.assertIn('COPY --from=audax-build-tools /audax-no-thp', bounded)
+        self.assertIn('/usr/local/bin/audax-no-thp env NODE_OPTIONS=', bounded)
+        self.assertTrue(bounded.endswith('FROM node AS runner\nCMD ["node", "app"]\n'))
+        self.assertNotIn('transparent_hugepage', bounded)
+
+    def test_thp_launcher_flag_survives_child_exec_and_propagates_exit(self):
+        import tempfile
+        import subprocess
+        import sys
+        with tempfile.TemporaryDirectory() as temp:
+            binary = str(Path(temp) / 'no-thp')
+            subprocess.run(['gcc', '-Wall', '-Werror', str(Path(__file__).with_name('no-thp.c')), '-o', binary], check=True)
+            code = "import subprocess; print(subprocess.check_output(['grep','THP_enabled:','/proc/self/status'],text=True))"
+            result = subprocess.run([binary, sys.executable, '-c', code], capture_output=True, text=True, check=True)
+            self.assertIn('THP_enabled:\t0', result.stdout)
+            self.assertEqual(subprocess.run([binary, '/bin/sh', '-c', 'exit 7']).returncode, 7)
+            self.assertEqual(subprocess.run([binary], capture_output=True).returncode, 64)
+            self.assertEqual(subprocess.run([binary, '/missing-command'], capture_output=True).returncode, 127)
+
     def test_reclaim_requests_only_build_file_cache(self):
         import tempfile
         from pathlib import Path

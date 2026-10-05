@@ -136,8 +136,17 @@ def trim_build_cache(directory=Path('/sys/fs/cgroup/audax.slice/audax-build.slic
 
 def bounded_dockerfile(source):
     # Only build commands change; final runtime ENV/CMD remain untouched.
+    if 'pnpm turbo run build' in source:
+        tools = ('FROM node:22-alpine AS audax-build-tools\n'
+                 'RUN apk add --no-cache gcc musl-dev\n'
+                 'COPY deployments/audax/no-thp.c /tmp/no-thp.c\n'
+                 'RUN cc -O2 -static -s /tmp/no-thp.c -o /audax-no-thp\n\n')
+        source = source.replace('FROM ', tools + 'FROM ', 1)
+        source = source.replace('RUN pnpm turbo run build',
+                                'COPY --from=audax-build-tools /audax-no-thp /usr/local/bin/audax-no-thp\n'
+                                'RUN pnpm turbo run build')
     source = re.sub(r'pnpm turbo run build(?: --concurrency(?:=| )\d+)?',
-                    'NODE_OPTIONS=--max-old-space-size=2560 UV_THREADPOOL_SIZE=1 RAYON_NUM_THREADS=1 '
+                    '/usr/local/bin/audax-no-thp env NODE_OPTIONS=--max-old-space-size=2560 UV_THREADPOOL_SIZE=1 RAYON_NUM_THREADS=1 '
                     'pnpm turbo run build --concurrency=1', source)
     source = source.replace('CI=true pnpm install', 'CI=true npm_config_child_concurrency=1 pnpm install')
     source = source.replace('pip install ', 'MAKEFLAGS=-j1 CARGO_BUILD_JOBS=1 pip install ')
