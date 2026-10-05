@@ -135,6 +135,7 @@ export type TGetColumns = {
 };
 
 export interface IGroupByColumn {
+  disableIssueCreation?: boolean;
   id: string;
   name: string;
   icon?: React.ReactElement | undefined;

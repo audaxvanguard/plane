@@ -179,7 +179,7 @@ export const KanBan = observer(function KanBan(props: IKanBan) {
                     count={getGroupIssueCount(subList.id, undefined, false) ?? 0}
                     issuePayload={subList.payload}
                     disableIssueCreation={
-                      disableIssueCreation ||
+                      disableIssueCreation || subList.disableIssueCreation ||
                       isGroupByCreatedBy ||
                       getIsWorkflowWorkItemCreationDisabled(subList.id, sub_group_id)
                     }
@@ -223,9 +223,9 @@ export const KanBan = observer(function KanBan(props: IKanBan) {
                     dropErrorMessage={subList.dropErrorMessage ?? dropErrorMessage}
                     updateIssue={updateIssue}
                     quickActions={quickActions}
-                    enableQuickIssueCreate={enableQuickIssueCreate}
+                    enableQuickIssueCreate={enableQuickIssueCreate && !subList.disableIssueCreation}
                     quickAddCallback={quickAddCallback}
-                    disableIssueCreation={disableIssueCreation}
+                    disableIssueCreation={disableIssueCreation || subList.disableIssueCreation}
                     canEditProperties={canEditProperties}
                     scrollableContainerRef={scrollableContainerRef}
                     loadMoreIssues={loadMoreIssues}

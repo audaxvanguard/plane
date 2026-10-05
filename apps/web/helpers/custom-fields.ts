@@ -35,6 +35,7 @@ export function customGroupColumns(field: TProjectCustomField, label: (key: stri
   if (!["checkbox", "select"].includes(field.type)) return [];
   return [...values, { id: "unset", name: label("unset"), value: null }].map(({ id, name, value }) => ({
     id, name, payload: { custom_values: { [field.id]: value } },
+    ...(field.is_archived || field.options.some((option) => option.id === id && option.is_retired) ? { disableIssueCreation: true } : {}),
   }));
 }
 

@@ -8,6 +8,7 @@ import { useEffect, useRef } from "react";
 import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
 import { autoScrollForElements } from "@atlaskit/pragmatic-drag-and-drop-auto-scroll/element";
 import { observer } from "mobx-react";
+import { useTranslation } from "@plane/i18n";
 // plane constants
 import { ALL_ISSUES } from "@plane/constants";
 // types
@@ -82,6 +83,7 @@ export const List = observer(function List(props: IList) {
   } = props;
 
   const storeType = useIssueStoreType();
+  const { t } = useTranslation();
   // plane web hooks
   const isBulkOperationsEnabled = useBulkOperationStatus();
 
@@ -89,6 +91,7 @@ export const List = observer(function List(props: IList) {
 
   const groups = getGroupByColumns({
     groupBy: group_by as GroupByColumnTypes,
+    translate: t,
     includeNone: true,
     isWorkspaceLevel: isWorkspaceLevel(storeType),
     isEpic: isEpic,
@@ -159,7 +162,7 @@ export const List = observer(function List(props: IList) {
                     showEmptyGroup={showEmptyGroup}
                     canEditProperties={canEditProperties}
                     quickAddCallback={quickAddCallback}
-                    disableIssueCreation={disableIssueCreation}
+                    disableIssueCreation={disableIssueCreation || group.disableIssueCreation}
                     addIssuesToView={addIssuesToView}
                     isCompletedCycle={isCompletedCycle}
                     loadMoreIssues={loadMoreIssues}

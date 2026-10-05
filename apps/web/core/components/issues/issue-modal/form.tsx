@@ -488,7 +488,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                 />
                 <IssueFormOptionalTimes timeZone={timeZone} disabled={isDisabled} onChange={handleFormChange} />
                 {customFieldError && <p role="alert" className="mt-2 text-body-xs-regular text-danger-primary">{t("project_settings.custom_fields.load_error")}</p>}
-                <IssueFormCustomFields fields={customFieldStore.getFields(projectId)} disabled={isDisabled} onChange={handleFormChange} />
+                <IssueFormCustomFields fields={projectId ? customFieldStore.getFields(projectId) : []} disabled={isDisabled} onChange={handleFormChange} />
               </div>
               {showActionButtons && (
                 <div

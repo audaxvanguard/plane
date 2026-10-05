@@ -52,6 +52,13 @@ test('checkbox columns keep false and unset as separate native groups',()=>{
     {id:'unset',name:'Não definido',payload:{custom_values:{qualified:null}}},
   ]);
 });
+test('archived fields and retired select groups do not offer new-item assignment',()=>{
+  const archived = helpers.customGroupColumns({id:'q',type:'checkbox',is_archived:true,options:[]}, key=>key);
+  assert.equal(archived.every(column=>column.disableIssueCreation === true), true);
+  const retired = helpers.customGroupColumns({id:'stage',type:'select',options:[{id:'old',label:'Old',is_retired:true}]}, key=>key);
+  assert.equal(retired[0].disableIssueCreation, true);
+  assert.equal(retired[1].disableIssueCreation, undefined);
+});
 test('text length uses Unicode characters like backend validation',()=>{
   assert.equal(normalizeCustomInput(field('text'),'😀'.repeat(2000)), '😀'.repeat(2000));
   assert.throws(()=>normalizeCustomInput(field('text'),'😀'.repeat(2001)));
