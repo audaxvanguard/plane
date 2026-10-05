@@ -1,5 +1,6 @@
 {
   "project_settings": {
+    "custom_fields": { "label": "Campos personalizados", "description": "Campos opcionais do projeto para todos os itens de trabalho." },
     "general": {
       "enter_project_id": "Inserir ID do projeto",
       "please_select_a_timezone": "Por favor, selecione um fuso horário",

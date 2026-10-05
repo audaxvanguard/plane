@@ -136,7 +136,7 @@ def run_native_browser(args):
         for name in ('package.json', 'package-lock.json'):
             shutil.copy(ROOT / 'deployments/audax/browser' / name, work / name)
         shutil.copy(script, work / 'run.mjs')
-        env = {**os.environ, 'SOURCE_ROOT': str(ROOT), 'CHROME_PATH': '/usr/bin/google-chrome',
+        env = {**os.environ, 'SOURCE_ROOT': str(ROOT), 'CHROME_PATH': os.environ.get('CF_CHROME', '/usr/bin/google-chrome'),
                'NODE_OPTIONS': '--max-old-space-size=256',
                'PATH': str(Path(node).parent) + ':' + os.environ.get('PATH', '')}
         previous_cwd = Path.cwd()
@@ -154,7 +154,7 @@ def run_native_browser(args):
 
 
 def run_browser(args):
-    if Path('/usr/bin/google-chrome').is_file() and args and args[0] == '--fixture':
+    if Path(os.environ.get('CF_CHROME', '/usr/bin/google-chrome')).is_file() and args and args[0] == '--fixture':
         return run_native_browser(args)
     package = ROOT / 'deployments/audax/browser'
     script = args[1] if args and args[0] == '--fixture' else 'deployments/audax/browser/smoke.mjs'
@@ -181,6 +181,8 @@ def protected_command(mode, args):
                '--property=OOMScoreAdjust=800', '--property=MemorySwapMax=0']
     if mode in ('helpers', 'browser'):
         command.extend([f'--property=MemoryMax={"256M" if mode == "helpers" else "1G"}', f'--setenv=CF_NODE={shutil.which("node")}'])
+    if mode == 'browser' and os.environ.get('CF_CHROME'):
+        command.append(f'--setenv=CF_CHROME={os.environ["CF_CHROME"]}')
     return [*command, sys.executable, str(Path(__file__).resolve()), '_' + mode, *args]
 
 

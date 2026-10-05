@@ -1,5 +1,6 @@
 {
   "project_settings": {
+    "custom_fields": { "label": "Custom fields", "description": "Optional project fields for every work item." },
     "general": {
       "enter_project_id": "Enter project ID",
       "please_select_a_timezone": "Please select a timezone",

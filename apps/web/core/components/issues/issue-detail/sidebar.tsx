@@ -37,6 +37,7 @@ import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
 import { useUser } from "@/hooks/store/user";
 import { OptionalIssueTime } from "./optional-time";
+import { ItemCustomFields } from "../custom-fields/item-fields";
 // components
 import { IssueParentSelectRoot } from "@/components/issues/parent-select-root";
 import { SidebarPropertyListItem } from "@/components/common/layout/sidebar/property-list-item";
@@ -85,6 +86,7 @@ export const IssueDetailsSidebar = observer(function IssueDetailsSidebar(props: 
     <>
       <div className="flex h-full w-full flex-col items-center divide-y-2 divide-subtle-1 overflow-hidden">
         <div className="h-full w-full overflow-y-auto px-6">
+          <ItemCustomFields workspaceSlug={workspaceSlug} projectId={projectId} issue={issue} disabled={!isEditable} onUpdate={(data) => issueOperations.update(workspaceSlug, projectId, issueId, data)} />
           <h5 className="mt-5 text-body-xs-medium">{t("common.properties")}</h5>
           <div className={`mt-4 mb-2 space-y-2.5 truncate ${!isEditable ? "opacity-60" : ""}`}>
             <SidebarPropertyListItem icon={StatePropertyIcon} label={t("common.state")}>
