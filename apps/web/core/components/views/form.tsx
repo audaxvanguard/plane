@@ -6,6 +6,7 @@
 
 import { useState } from "react";
 import { observer } from "mobx-react";
+import { configurationFromView, projectQueryConfig } from "@/helpers/project-view-config";
 import { Controller, useForm } from "react-hook-form";
 // plane imports
 import { ETabIndices, ISSUE_DISPLAY_FILTERS_BY_PAGE } from "@plane/constants";
@@ -74,8 +75,9 @@ export const ProjectViewForm = observer(function ProjectViewForm(props: Props) {
     setValue,
     watch,
   } = useForm<IProjectView>({
-    defaultValues,
+    defaultValues: { ...defaultValues, ...configurationFromView(defaultValues) },
   });
+  const [saveError, setSaveError] = useState(false);
   // derived values
   const projectDetails = getProjectById(projectId);
   const logoValue = watch("logo_props");
@@ -88,7 +90,10 @@ export const ProjectViewForm = observer(function ProjectViewForm(props: Props) {
   const { getIndex } = getTabIndex(ETabIndices.PROJECT_VIEW, isMobile);
 
   const handleCreateUpdateView = async (formData: IProjectView) => {
+    setSaveError(false);
+    try {
     await handleFormSubmit({
+      custom_view: projectQueryConfig({ display_filters: formData.display_filters, display_properties: formData.display_properties, rich_filters: formData.rich_filters, custom_view: formData.custom_view ?? {} }),
       name: formData.name,
       description: formData.description,
       logo_props: formData.logo_props,
@@ -98,13 +103,15 @@ export const ProjectViewForm = observer(function ProjectViewForm(props: Props) {
       access: formData.access,
     } as IProjectView);
 
-    reset({
-      ...defaultValues,
-    });
+    reset({ ...defaultValues, ...configurationFromView(defaultValues) });
+    } catch {
+      setSaveError(true);
+    }
   };
 
   return (
     <form onSubmit={handleSubmit(handleCreateUpdateView)}>
+      {saveError && <p role="alert" className="px-5 pt-3 text-danger-primary">{t("project_settings.custom_fields.view_save_error")}</p>}
       <div className="space-y-5 p-5">
         <h3 className="text-18 font-medium text-secondary">{data ? t("view.update.label") : t("view.create.label")}</h3>
         <div className="space-y-3">

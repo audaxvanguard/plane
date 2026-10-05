@@ -2,34 +2,8 @@ import {build} from 'esbuild';
 import {chromium} from 'playwright-core';
 import assert from 'node:assert/strict';
 const root=process.env.SOURCE_ROOT, work=process.cwd();
-const {nativeUIBuild}=await import(root+'/deployments/audax/native-ui-test-build.mjs');
-const options=nativeUIBuild(root,work,'view-properties-fixture.tsx');
-const bridge=root+'/deployments/audax/view-properties-test-bridge.tsx';
-Object.assign(options.alias,{
- '@plane/constants':root+'/deployments/audax/view-properties-test-constants.ts',
- '@plane/types':root+'/packages/types/src/index.ts',
- '@plane/utils':bridge,'@plane/ui':bridge,
- '@plane/propel/emoji-icon-picker':bridge,
- 'next/navigation':bridge,
- '@/hooks/use-custom-fields':bridge,
- '@/hooks/store/use-project':bridge,
- '@/hooks/store/user':bridge,
- '@/hooks/use-platform-os':bridge,
- '@/components/issues/issue-layouts/filters':bridge,
- '@/components/dropdowns/layout':bridge,
- '@/components/work-item-filters/filters-hoc/project-level':bridge,
- '@/components/work-item-filters/filters-row':bridge,
- axios:work+'/node_modules/axios/dist/browser/axios.cjs',
- '@/helpers':root+'/apps/web/helpers',
- '@':root+'/apps/web/core',
-});
-options.define['process.env']='{}';
-options.plugins=[{name:'stock-boundaries',setup(b){b.onResolve({filter:/.*/},a=>{
- if(a.importer.endsWith('/views/form.tsx') && /work-item-filters\/|dropdowns\/layout/.test(a.path)) return {path:bridge};
- if(a.importer.endsWith('/group-by.tsx') && a.path==='../../../utils') return {path:bridge};
- if(a.importer.endsWith('/use-project-custom-field-definitions.ts') && a.path==='./use-custom-fields') return {path:bridge};
- return null;
-});}}];
+const {viewPropertiesBuild}=await import(root+'/deployments/audax/view-properties-test-build.mjs');
+const options=await viewPropertiesBuild(root,work,'view-properties-fixture.tsx');
 const result=await build(options);
 const browser=await chromium.launch({executablePath:process.env.CHROME_PATH,headless:true,args:['--no-sandbox']});
 try{
@@ -53,8 +27,12 @@ try{
  await page.getByRole('button',{name:'Amount A',exact:true}).click();
  await page.locator('#name').fill('CRM');
  await page.getByRole('button',{name:'view.create.label',exact:true}).click();
+ await page.getByRole('alert').waitFor();
+ assert.equal(await page.locator('#name').inputValue(),'CRM','failed view save keeps form inputs');
+ await page.getByRole('button',{name:'view.create.label',exact:true}).click();
  await page.waitForFunction(()=>document.getElementById('result').textContent.includes('CRM'));
  assert.deepEqual(JSON.parse(await page.locator('#result').textContent()).display_properties.custom_fields,['amount-A'],'actual form submits property selection');
+ assert.equal(JSON.parse(await page.locator('#result').textContent()).custom_view.columns[0].alias,'Receita','form must not strip v2 custom configuration');
  assert.equal(requests.some(r=>r.method!=='GET'),false,'property selection must not silently save a shared view');
  await page.getByRole('button',{name:'Saved-view header',exact:true}).click();
  await page.getByRole('button',{name:'Amount A',exact:true}).waitFor();

@@ -60,6 +60,7 @@ export const CreateUpdateProjectViewModal = observer(function CreateUpdateProjec
         title: "Error!",
         message: "Failed to create view. Please try again.",
       });
+      throw _error;
     }
   };
 
@@ -75,6 +76,7 @@ export const CreateUpdateProjectViewModal = observer(function CreateUpdateProjec
         title: "Error!",
         message: "Failed to update view. Please try again.",
       });
+      throw _error;
     }
   };
 

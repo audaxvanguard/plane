@@ -56,6 +56,7 @@ import type { IWorkspaceNotificationStore } from "./notifications/workspace-noti
 import { WorkspaceNotificationStore } from "./notifications/workspace-notifications.store";
 import type { IProjectPageStore } from "./pages/project-page.store";
 import { ProjectPageStore } from "./pages/project-page.store";
+import { ViewConfigurationStore } from "./project/view-configuration.store";
 import { CustomFieldStore } from "./project/custom-field.store";
 import type { IProjectRootStore } from "./project";
 import { ProjectRootStore } from "./project";
@@ -77,6 +78,7 @@ export class CoreRootStore {
   workspaceRoot: IWorkspaceRootStore;
   projectRoot: IProjectRootStore;
   customFields: CustomFieldStore;
+  viewConfiguration: ViewConfigurationStore;
   memberRoot: IMemberRootStore;
   cycle: ICycleStore;
   cycleFilter: ICycleFilterStore;
@@ -107,6 +109,7 @@ export class CoreRootStore {
   timelineStore: ITimelineStore;
 
   constructor() {
+    this.viewConfiguration = new ViewConfigurationStore(undefined, (view) => { this.projectView.viewMap[view.id] = view; });
     this.customFields = new CustomFieldStore();
     this.router = new RouterStore();
     this.commandPalette = new CommandPaletteStore();
@@ -141,6 +144,8 @@ export class CoreRootStore {
   }
 
   resetOnSignOut() {
+    this.viewConfiguration.reset();
+    this.viewConfiguration = new ViewConfigurationStore(undefined, (view) => { this.projectView.viewMap[view.id] = view; });
     this.customFields = new CustomFieldStore();
     // handling the system theme when user logged out from the app
     localStorage.setItem("theme", "system");

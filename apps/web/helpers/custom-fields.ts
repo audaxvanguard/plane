@@ -23,7 +23,7 @@ export function customGroupPage(config: TProjectCustomViewConfig, groupId: strin
   const field_id = config.group_by.field_id;
   const condition = groupId === "unset" ? { field_id, operator: "is_unset" as const }
     : { field_id, operator: "eq" as const, value: groupId === "true" ? true : groupId === "false" ? false : groupId };
-  return { ...config, group_by: null, conditions: [...config.conditions, condition] };
+  return { ...config, ...(config.version === 2 ? { stages: null } : {}), group_by: null, conditions: [...config.conditions, condition] };
 }
 
 /** Reuse native column/payload contracts without confusing false with unset. */

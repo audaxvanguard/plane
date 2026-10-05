@@ -25,6 +25,8 @@ import { EIssuesStoreType } from "@plane/types";
 import { handleIssueQueryParamsByLayout } from "@plane/utils";
 // services
 import { ViewService } from "@/services/view.service";
+import { projectQueryConfig } from "@/helpers/project-view-config";
+import type { ViewConfiguration } from "@/helpers/project-view-config";
 import type { IBaseIssueFilterStore } from "../helpers/issue-filter-helper.store";
 import { IssueFilterHelperStore } from "../helpers/issue-filter-helper.store";
 // helpers
@@ -107,7 +109,11 @@ export class ProjectViewIssuesFilter extends IssueFilterHelperStore implements I
     const displayFilters = this.filters[viewId] || undefined;
     if (isEmpty(displayFilters)) return undefined;
 
-    const _filters: IIssueFilters = this.computedIssueFilters(displayFilters);
+    const context = this.configurationContext(viewId);
+    const working = context ? this.rootIssueStore.rootStore.viewConfiguration.get(context)?.working : undefined;
+    const _filters: IIssueFilters = this.computedIssueFilters(working ? {
+      ...displayFilters, displayFilters: working.display_filters, displayProperties: working.display_properties, richFilters: working.rich_filters,
+    } : displayFilters);
 
     return _filters;
   }
@@ -125,7 +131,25 @@ export class ProjectViewIssuesFilter extends IssueFilterHelperStore implements I
       filteredParams
     );
 
+    const context = this.configurationContext(viewId);
+    const working = context ? this.rootIssueStore.rootStore.viewConfiguration.get(context)?.working : undefined;
+    if (working) {
+      filteredRouteParams.view_id = viewId;
+      filteredRouteParams.custom_view = JSON.stringify(projectQueryConfig(working));
+    }
     return filteredRouteParams;
+  }
+
+  private configurationContext(viewId: string) {
+    const { workspaceSlug, projectId } = this.rootIssueStore;
+    return workspaceSlug && projectId ? { workspaceSlug, projectId, viewId } : undefined;
+  }
+
+  private changeConfiguration(workspaceSlug: string, projectId: string, viewId: string, patch: Partial<ViewConfiguration>) {
+    const context = { workspaceSlug, projectId, viewId };
+    const store = this.rootIssueStore.rootStore.viewConfiguration;
+    // This class is also reused by team views; only extend hydrated project views.
+    if (store.get(context)) store.change(context, patch);
   }
 
   getFilterParams = computedFn(
@@ -144,6 +168,7 @@ export class ProjectViewIssuesFilter extends IssueFilterHelperStore implements I
   );
 
   mutateFilters: IProjectViewIssuesFilter["mutateFilters"] = action((workspaceSlug, viewId, viewDetails) => {
+    if (viewDetails.project) this.rootIssueStore.rootStore.viewConfiguration.hydrate({ workspaceSlug, projectId: viewDetails.project, viewId }, viewDetails);
     const richFilters: TWorkItemFilterExpression = viewDetails?.rich_filters;
     const displayFilters: IIssueDisplayFilterOptions = this.computedDisplayFilters(viewDetails?.display_filters);
     const displayProperties: IIssueDisplayProperties = this.computedDisplayProperties(viewDetails?.display_properties);
@@ -197,6 +222,7 @@ export class ProjectViewIssuesFilter extends IssueFilterHelperStore implements I
     try {
       runInAction(() => {
         set(this.filters, [viewId, "richFilters"], filters);
+        this.changeConfiguration(workspaceSlug, projectId, viewId, { rich_filters: filters });
       });
 
       this.rootIssueStore.projectViewIssues.fetchIssuesWithExistingPagination(
@@ -262,6 +288,7 @@ export class ProjectViewIssuesFilter extends IssueFilterHelperStore implements I
             });
           });
 
+          this.changeConfiguration(workspaceSlug, projectId, viewId, { display_filters: _filters.displayFilters });
           if (this.getShouldClearIssues(updatedDisplayFilters)) {
             this.rootIssueStore.projectIssues.clear(true); // clear issues for local store when some filters like layout changes
           }
@@ -291,6 +318,7 @@ export class ProjectViewIssuesFilter extends IssueFilterHelperStore implements I
             });
           });
 
+          this.changeConfiguration(workspaceSlug, projectId, viewId, { display_properties: _filters.displayProperties });
           break;
         }
         case EIssueFilterType.KANBAN_FILTERS: {

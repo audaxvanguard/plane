@@ -305,3 +305,37 @@ def test_typed_families(
             Issue.objects.filter(project=crm_project), cfg
         ).values_list("id", flat=True)
     ) == [item.id]
+
+
+def test_v2_save_copy_and_existing_owner_lock_permissions(
+    crm_project, crm_admin_client, crm_member_client, currency_field, mocker
+):
+    mocker.patch("plane.app.views.view.base.recent_visited_task.delay")
+    url = f"/api/workspaces/{crm_project.workspace.slug}/projects/{crm_project.id}/views/"
+    presentation = config(
+        version=2,
+        columns=[{"kind": "custom", "field_id": str(currency_field.id), "alias": "Receita"}],
+        conditions=[{"field_id": str(currency_field.id), "operator": "gte", "value": "0.10"}],
+        metrics=[{"field_id": str(currency_field.id), "scopes": ["all", "open", "filtered"]}],
+        stages={"source": "state", "order": [], "hidden": [], "aliases": {}},
+        count_scopes=["filtered"],
+    )
+    created = crm_admin_client.post(url, {"name": "Pipeline", "access": 1, "display_filters": {"group_by": "state"}, "custom_view": presentation}, format="json")
+    assert created.status_code == 201, created.data
+    detail = url + str(created.data["id"]) + "/"
+    denied = crm_member_client.patch(detail, {"custom_view": {}}, format="json")
+    assert denied.status_code in (400, 403), denied.data
+    assert crm_admin_client.get(detail).data["custom_view"] == presentation
+    from plane.db.models import IssueView
+    IssueView.objects.filter(id=created.data["id"]).update(is_locked=True)
+    locked = crm_admin_client.patch(detail, {"custom_view": {}}, format="json")
+    assert locked.status_code == 400, locked.data
+    assert crm_admin_client.get(detail).data["custom_view"] == presentation
+    copied = crm_member_client.post(url, {"name": "Native copy", "access": 0, "display_filters": {"group_by": "state"}, "custom_view": presentation}, format="json")
+    assert copied.status_code == 201, copied.data
+    assert copied.data["custom_view"] == presentation
+    assert copied.data["access"] == 1  # access is read-only on the native create endpoint
+    assert crm_admin_client.get(url + str(copied.data["id"]) + "/").status_code == 200
+    invalid = crm_member_client.patch(url + str(copied.data["id"]) + "/", {"custom_view": config(conditions=[{"field_id": "00000000-0000-0000-0000-000000000000", "operator": "is_set"}])}, format="json")
+    assert invalid.status_code == 400
+    assert crm_member_client.get(url + str(copied.data["id"]) + "/").data["custom_view"] == presentation

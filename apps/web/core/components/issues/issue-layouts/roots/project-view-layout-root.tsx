@@ -15,6 +15,10 @@ import { EIssuesStoreType, EIssueLayoutTypes } from "@plane/types";
 import { ProjectLevelWorkItemFiltersHOC } from "@/components/work-item-filters/filters-hoc/project-level";
 import { WorkItemFiltersRow } from "@/components/work-item-filters/filters-row";
 import { useIssues } from "@/hooks/store/use-issues";
+import { useUser } from "@/hooks/store/user";
+import { useWorkItemFilters } from "@/hooks/store/work-item-filters/use-work-item-filters";
+import { useAppRouter } from "@/hooks/use-app-router";
+import { ViewConfigurationToolbar } from "@/components/views/configuration/toolbar";
 import { useProjectView } from "@/hooks/store/use-project-view";
 import { IssuesStoreContext } from "@/hooks/use-issue-layout-store";
 // local imports
@@ -49,7 +53,10 @@ export const ProjectViewLayoutRoot = observer(function ProjectViewLayoutRoot() {
   const projectId = routerProjectId ? routerProjectId?.toString() : undefined;
   const viewId = routerViewId ? routerViewId?.toString() : undefined;
   // hooks
-  const { issuesFilter } = useIssues(EIssuesStoreType.PROJECT_VIEW);
+  const { issuesFilter, issues } = useIssues(EIssuesStoreType.PROJECT_VIEW);
+  const { data: currentUser } = useUser();
+  const { resetExpression } = useWorkItemFilters();
+  const router = useAppRouter();
   const { getViewById } = useProjectView();
   // derived values
   const projectView = viewId ? getViewById(viewId) : undefined;
@@ -60,7 +67,7 @@ export const ProjectViewLayoutRoot = observer(function ProjectViewLayoutRoot() {
         displayFilters: workItemFilters?.displayFilters,
         displayProperties: workItemFilters?.displayProperties,
         kanbanFilters: workItemFilters?.kanbanFilters,
-        richFilters: projectView.rich_filters,
+        richFilters: workItemFilters?.richFilters,
       }
     : undefined;
 
@@ -86,11 +93,6 @@ export const ProjectViewLayoutRoot = observer(function ProjectViewLayoutRoot() {
   return (
     <IssuesStoreContext.Provider value={EIssuesStoreType.PROJECT_VIEW}>
       <ProjectLevelWorkItemFiltersHOC
-        enableSaveView
-        saveViewOptions={{
-          label: "Save as",
-        }}
-        enableUpdateView
         entityId={viewId}
         entityType={EIssuesStoreType.PROJECT_VIEW}
         filtersToShowByLayout={ISSUE_DISPLAY_FILTERS_BY_PAGE.issues.filters}
@@ -101,6 +103,11 @@ export const ProjectViewLayoutRoot = observer(function ProjectViewLayoutRoot() {
       >
         {({ filter: projectViewWorkItemsFilter }) => (
           <div className="relative flex h-full w-full flex-col overflow-hidden">
+            <ViewConfigurationToolbar key={`${workspaceSlug}:${projectId}:${viewId}`} context={{ workspaceSlug, projectId, viewId }}
+              canSave={projectView?.owned_by === currentUser?.id && !projectView?.is_locked}
+              onApplied={() => { void issues.fetchIssuesWithExistingPagination(workspaceSlug, projectId, viewId, "mutation").catch(() => {}); }}
+              onDiscard={() => { const filters = issuesFilter.getIssueFilters(viewId); if (filters) resetExpression(EIssuesStoreType.PROJECT_VIEW, viewId, filters.richFilters); }}
+              onCopied={(id) => router.push(`/${workspaceSlug}/projects/${projectId}/views/${id}`)} />
             {projectViewWorkItemsFilter && (
               <WorkItemFiltersRow
                 filter={projectViewWorkItemsFilter}

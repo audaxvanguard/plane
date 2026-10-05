@@ -14,6 +14,7 @@ import type { IProjectView, TViewFilters } from "@plane/types";
 import { getValidatedViewFilters, getViewName, orderViews, shouldFilterView } from "@plane/utils";
 // services
 import { ViewService } from "@/services/view.service";
+import { copyConfiguration } from "@/helpers/project-view-config";
 // store
 import type { CoreRootStore } from "./root.store";
 
@@ -204,7 +205,7 @@ export class ProjectViewStore implements IProjectViewStore {
    * @returns Promise<IProjectView>
    */
   async createView(workspaceSlug: string, projectId: string, data: Partial<IProjectView>): Promise<IProjectView> {
-    const response = await this.viewService.createView(workspaceSlug, projectId, getValidatedViewFilters(data));
+    const response = await this.viewService.createView(workspaceSlug, projectId, getValidatedViewFilters(copyConfiguration(data)));
 
     runInAction(() => {
       set(this.viewMap, [response.id], response);
@@ -227,14 +228,8 @@ export class ProjectViewStore implements IProjectViewStore {
     viewId: string,
     data: Partial<IProjectView>
   ): Promise<IProjectView> {
-    const currentView = this.getViewById(viewId);
-
-    runInAction(() => {
-      set(this.viewMap, [viewId], { ...currentView, ...data });
-    });
-
     const response = await this.viewService.patchView(workspaceSlug, projectId, viewId, data);
-
+    runInAction(() => { set(this.viewMap, [viewId], response); });
     return response;
   }
 

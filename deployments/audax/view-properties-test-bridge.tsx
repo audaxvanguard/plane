@@ -1,7 +1,10 @@
 // Test-only boundaries: real form/display UI and metadata store are not mocked.
 import React from 'react';
 import { CustomFieldStore } from '../../apps/web/core/store/project/custom-field.store';
+import { ViewConfigurationStore } from '../../apps/web/core/store/project/view-configuration.store';
 export const fieldsStore = new CustomFieldStore();
+export const configurationStore = new ViewConfigurationStore();
+export function useViewConfiguration() { return configurationStore; }
 export function useCustomFields() { return fieldsStore; }
 export function useParams() { return (window as any).fixtureParams ?? {}; }
 export function useProject() { return {getProjectById:()=>({cycle_view:true,module_view:true})}; }
