@@ -1,12 +1,39 @@
 // Copyright (c) 2023-present Plane Software, Inc. and contributors
 // SPDX-License-Identifier: AGPL-3.0-only
-import type { IProjectView, TCustomViewPresentationColumn, TProjectCustomViewConfig, TProjectCustomViewConfigV2 } from "@plane/types";
+import type { IProjectView, TCustomViewPresentationColumn, TProjectCustomViewConfig, TProjectCustomViewConfigV2, TCustomBuiltinColumn, TProjectCustomField } from "@plane/types";
 export type ViewContext = { workspaceSlug: string; projectId: string; viewId: string };
 export type ViewConfiguration = Pick<IProjectView, "display_filters" | "display_properties" | "rich_filters"> & { custom_view: TProjectCustomViewConfig | Record<string, never> };
 export function copyConfiguration<T>(value: T): T { return JSON.parse(JSON.stringify(value)); }
 export function viewContextKey(context: ViewContext) { return JSON.stringify([context.workspaceSlug, context.projectId, context.viewId]); }
 export function columnKey(column: TCustomViewPresentationColumn): string {
   return column.kind === "builtin" ? `builtin:${column.key}` : `custom:${column.field_id}`;
+}
+export type ViewColumnFeatures = Partial<Record<"cycle" | "modules" | "estimate", boolean>> & { legacyColumns?: TCustomBuiltinColumn[]; legacyCustomFields?: string[]; titles?: Partial<Record<TCustomBuiltinColumn, string>> };
+export type TResolvedViewColumn = { key: string; kind: "builtin" | "custom"; reference: string; title: string; builtin?: TCustomBuiltinColumn; field?: TProjectCustomField; readOnly: boolean; archived: boolean };
+export function validateViewAlias(value: string): string {
+  const alias = value.trim();
+  if (!alias || Array.from(alias).length > 255) throw new Error("Aliases require 1–255 Unicode characters.");
+  return alias;
+}
+export function resolveViewColumns(config: TProjectCustomViewConfig | Record<string, never>, metadata: TProjectCustomField[], features: ViewColumnFeatures): TResolvedViewColumn[] {
+  const configured = config.version && config.columns.length > 0;
+  const columns: TCustomViewPresentationColumn[] = configured ? copyConfiguration(config.columns) : [
+    ...(features.legacyColumns ?? ["state", "priority"]).map((key) => ({ kind: "builtin" as const, key })),
+    ...(features.legacyCustomFields ?? []).map((field_id) => ({ kind: "custom" as const, field_id })),
+  ];
+  const identity = columns.find((c) => c.kind === "builtin" && c.key === "name") ?? { kind: "builtin" as const, key: "name" as const };
+  const seen = new Set<string>();
+  return [identity, ...columns.filter((c) => !(c.kind === "builtin" && c.key === "name"))].flatMap<TResolvedViewColumn>((column) => {
+    const key = columnKey(column);
+    if (seen.has(key)) throw new Error("Duplicate view column.");
+    seen.add(key);
+    if (column.kind === "builtin") {
+      if ((column.key === "cycle" || column.key === "modules" || column.key === "estimate") && features[column.key] === false) return [];
+      return [{ key, kind: column.kind, reference: column.key, builtin: column.key, title: column.alias ? validateViewAlias(column.alias) : features.titles?.[column.key] ?? column.key, readOnly: false, archived: false }];
+    }
+    const field = metadata.find((f) => f.id === column.field_id);
+    return [{ key, kind: column.kind, reference: column.field_id, field, title: column.alias ? validateViewAlias(column.alias) : field?.name ?? column.field_id, readOnly: !field || field.is_archived, archived: !!field?.is_archived }];
+  });
 }
 export function emptyViewConfig(): TProjectCustomViewConfigV2 {
   return { version: 2, columns: [], conditions: [], sort: null, group_by: null, metrics: [], stages: null, count_scopes: [] };
