@@ -1,6 +1,6 @@
 # Editable project views and stage metrics
 
-Status: conversational scope approved; written specification awaiting user review. Product implementation must follow written-spec and implementation-plan review.
+Status: written specification approved by the user; implementation plan prepared for review. Product implementation follows implementation-plan review.
 
 ## Intent and relationship to existing work
 
@@ -13,8 +13,9 @@ This supplements `2026-10-03-project-custom-fields-and-views-design.md` and its 
 - [x] Inspect current display controls, view form/filter store, spreadsheet and configuration validator.
 - [x] Receive approval of the conversational scope, including both stage sources.
 - [x] Write this specification and self-review for consistency and safety.
-- [ ] User reviews written specification.
-- [ ] Write detailed implementation plan; user reviews and chooses sequential execution (no subagent tool available).
+- [x] User reviews and approves written specification.
+- [x] Write detailed implementation plan.
+- [ ] User reviews plan and confirms sequential execution (no subagent tool available).
 - [ ] Implement with failing tests first, verify real app flows, build and deploy safely.
 
 ## Existing gaps established by inspection
