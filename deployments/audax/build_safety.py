@@ -100,6 +100,7 @@ def guarded_run(command):
             problem = host_problem()
             if problem:
                 raise RuntimeError(f'Build/check aborted to protect production: {problem}')
+            trim_build_cache()
             time.sleep(2)
     except BaseException:
         if process.poll() is None:
@@ -117,6 +118,19 @@ def reclaim_build_cache(directory=Path('/sys/fs/cgroup/audax.slice/audax-build.s
             (directory / 'memory.reclaim').write_text(str(cache))
         except BlockingIOError:
             # Kernel EAGAIN means partial reclaim, not a failed limits check.
+            pass
+
+
+def trim_build_cache(directory=Path('/sys/fs/cgroup/audax.slice/audax-build.slice')):
+    # Prevent cold build-file pages from driving memory.high reclaim stalls.
+    # Small batches only; no host/global reclaim and no policy-limit changes.
+    if int((directory / 'memory.current').read_text()) <= 3 * GIB:
+        return
+    stats = dict(line.split() for line in (directory / 'memory.stat').read_text().splitlines())
+    if int(stats.get('inactive_file', '0')) > 768 * 1024**2:
+        try:
+            (directory / 'memory.reclaim').write_text(str(256 * 1024**2))
+        except BlockingIOError:
             pass
 
 

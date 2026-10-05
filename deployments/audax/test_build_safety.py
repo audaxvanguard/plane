@@ -48,6 +48,21 @@ class BuildSafetyTests(unittest.TestCase):
             safety.reclaim_build_cache(directory)
             self.assertEqual((directory / 'memory.reclaim').read_text(), '2000000000')
 
+    def test_proactive_reclaim_only_cold_build_cache(self):
+        import tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as temp:
+            directory = Path(temp)
+            (directory / 'memory.current').write_text(str(4 * GIB))
+            (directory / 'memory.stat').write_text(f'anon {2 * GIB}\ninactive_file {GIB}\n')
+            (directory / 'memory.reclaim').write_text('')
+            safety.trim_build_cache(directory)
+            self.assertEqual((directory / 'memory.reclaim').read_text(), str(256 * 1024**2))
+            (directory / 'memory.reclaim').write_text('')
+            (directory / 'memory.stat').write_text('inactive_file 1000\n')
+            safety.trim_build_cache(directory)
+            self.assertEqual((directory / 'memory.reclaim').read_text(), '')
+
     def test_compilers_are_serialized(self):
         source = 'RUN xcaddy build \\\n --with module\nRUN pip install -r requirements.txt\n'
         bounded = safety.bounded_dockerfile(source)
