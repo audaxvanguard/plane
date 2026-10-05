@@ -107,6 +107,19 @@ def guarded_run(command):
         raise
 
 
+def reclaim_build_cache(directory=Path('/sys/fs/cgroup/audax.slice/audax-build.slice')):
+    # Call only between jobs with the build/check containers stopped. Reclaim
+    # this slice's regenerable file cache, never host caches or anonymous RAM.
+    stats = dict(line.split() for line in (directory / 'memory.stat').read_text().splitlines())
+    cache = int(stats.get('file', '0'))
+    if cache:
+        try:
+            (directory / 'memory.reclaim').write_text(str(cache))
+        except BlockingIOError:
+            # Kernel EAGAIN means partial reclaim, not a failed limits check.
+            pass
+
+
 def bounded_dockerfile(source):
     # Only build commands change; final runtime ENV/CMD remain untouched.
     source = re.sub(r'pnpm turbo run build(?: --concurrency(?:=| )\d+)?',

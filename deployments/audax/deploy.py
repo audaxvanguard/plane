@@ -93,6 +93,9 @@ def build_image(image, context, dockerfile, tag, target=None):
 def frontend_check(tag):
     image = f'audaxvanguard/plane-web-typecheck:{tag}'
     try:
+        safety.cleanup_build_containers()
+        safety.reclaim_build_cache()
+        prepare_builder()
         build_image(image, '.', 'apps/web/Dockerfile.web', tag, target='installer')
         safety.cleanup_build_containers()  # No builder/check overlap.
         safety.guarded_run(safety.check_command(image, ['pnpm', '--filter', 'web', 'check:types']))
@@ -107,7 +110,6 @@ def build(check_only=False):
         raise RuntimeError('Build requires at least 25 GiB free disk space.')
     images = image_map(tag)
     try:
-        prepare_builder()
         if not check_only:
             for service, context, dockerfile in [
                 ('api', 'apps/api', 'apps/api/Dockerfile.api'),
@@ -117,6 +119,9 @@ def build(check_only=False):
                 ('live', '.', 'apps/live/Dockerfile.live'),
                 ('proxy', 'apps/proxy', 'apps/proxy/Dockerfile.ce'),
             ]:
+                safety.cleanup_build_containers()
+                safety.reclaim_build_cache()
+                prepare_builder()
                 build_image(images[service], context, dockerfile, tag)
         frontend_check(tag)
     finally:

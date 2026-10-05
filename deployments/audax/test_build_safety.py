@@ -38,6 +38,16 @@ class BuildSafetyTests(unittest.TestCase):
         self.assertNotIn('ENV NODE_OPTIONS', bounded)
         self.assertTrue(bounded.endswith('FROM node AS runner\nCMD ["node", "app"]\n'))
 
+    def test_reclaim_requests_only_build_file_cache(self):
+        import tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as temp:
+            directory = Path(temp)
+            (directory / 'memory.stat').write_text('anon 900000000\nfile 2000000000\n')
+            (directory / 'memory.reclaim').write_text('')
+            safety.reclaim_build_cache(directory)
+            self.assertEqual((directory / 'memory.reclaim').read_text(), '2000000000')
+
     def test_compilers_are_serialized(self):
         source = 'RUN xcaddy build \\\n --with module\nRUN pip install -r requirements.txt\n'
         bounded = safety.bounded_dockerfile(source)
