@@ -112,6 +112,7 @@ export const useGroupIssuesDragNDrop = (
     if(groupBy?.startsWith("custom_field:")) {
       try {
         if(subGroupBy)throw new Error("Custom stages do not support subgroups.");
+        if(!source.id)throw new Error("Invalid work item.");
         const issue=getIssueById(source.id);
         if(!issue?.project_id||!destination.columnId||!updateIssue)throw new Error("Invalid stage destination.");
         const field=customFields.getFields(issue.project_id).find(f=>f.id===groupBy.slice("custom_field:".length));

@@ -16,7 +16,7 @@ export function CustomFieldChoice({ id, label, value, choices, disabled, onChang
       <span className="truncate">{choices.find((choice) => choice.value === value)?.label ?? label}</span>
       <ChevronDown className="ml-auto size-3 shrink-0 text-tertiary" />
     </Popover.Button>
-    <Popover.Panel placement="bottom-start" className="z-50 min-w-44 rounded-md border border-subtle bg-surface-1 p-1 shadow-raised-200">
+    <Popover.Panel placement="bottom-start" positionerClassName="z-[110]" className="z-50 min-w-44 rounded-md border border-subtle bg-surface-1 p-1 shadow-raised-200">
       <div role="listbox" aria-label={label} className="vertical-scrollbar max-h-60 overflow-y-auto" onKeyDown={(event) => {
         const options = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'));
         const index = options.indexOf(document.activeElement as HTMLButtonElement);

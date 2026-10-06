@@ -4,6 +4,7 @@ import { CustomFieldStore } from '../../apps/web/core/store/project/custom-field
 import { ViewConfigurationStore } from '../../apps/web/core/store/project/view-configuration.store';
 export const fieldsStore = new CustomFieldStore();
 export const configurationStore = new ViewConfigurationStore();
+export function useViewMetrics(){return {invalidate:()=>{}};}
 export function useViewConfiguration() { return configurationStore; }
 export function useCustomFields() { return fieldsStore; }
 export function useParams() { return (window as any).fixtureParams ?? {}; }
@@ -11,6 +12,9 @@ export function useProject() { return {getProjectById:()=>({cycle_view:true,modu
 export function usePlatformOS() { return {isMobile:false}; }
 export function useUserPermissions() { return {workspaceUserInfo:{},allowPermissions:()=>((window as any).fixtureAdmin ?? true)}; }
 export const useGroupByOptions=()=>[];
+// Stock state settings/network boundary. Stage presentation has its own real-component suite.
+export function ProjectStateRoot(){return null;}
+export function useProjectState(){return {getProjectStates:()=>[],fetchProjectStates:async()=>[]};}
 export function ProjectLevelWorkItemFiltersHOC({children}:any) { return children({filter:null}); }
 export function WorkItemFiltersRow() { return null; }
 export function LayoutDropDown() { return null; }
