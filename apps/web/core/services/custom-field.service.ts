@@ -24,7 +24,7 @@ export class CustomFieldService extends APIService {
   async updateOption(slug: string, projectId: string, fieldId: string, optionId: string, data: Partial<TCustomFieldOption>): Promise<TCustomFieldOption> {
     return (await this.patch(`${this.endpoint(slug, projectId)}${fieldId}/options/${optionId}/`, data)).data;
   }
-  async getAggregates(slug: string, projectId: string, data: { custom_view: TProjectCustomViewConfig; view_id?: string; filters?: object; rich_filters?: object; display_filters?: object }): Promise<TCustomFieldAggregates> {
+  async getAggregates(slug: string, projectId: string, data: { custom_view: TProjectCustomViewConfig | Record<string,never>; view_id?: string; filters?: object; rich_filters?: object; display_filters?: object }): Promise<TCustomFieldAggregates> {
     return (await this.post(`${this.endpoint(slug, projectId)}aggregates/`, data)).data;
   }
 }

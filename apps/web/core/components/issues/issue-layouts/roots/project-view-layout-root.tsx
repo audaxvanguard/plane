@@ -19,6 +19,7 @@ import { useUser } from "@/hooks/store/user";
 import { useWorkItemFilters } from "@/hooks/store/work-item-filters/use-work-item-filters";
 import { useAppRouter } from "@/hooks/use-app-router";
 import { ViewConfigurationToolbar } from "@/components/views/configuration/toolbar";
+import { ViewPipelineTotals } from "../metrics/view-totals";
 import { useProjectView } from "@/hooks/store/use-project-view";
 import { IssuesStoreContext } from "@/hooks/use-issue-layout-store";
 // local imports
@@ -108,6 +109,7 @@ export const ProjectViewLayoutRoot = observer(function ProjectViewLayoutRoot() {
               onApplied={() => { void issues.fetchIssuesWithExistingPagination(workspaceSlug, projectId, viewId, "mutation").catch(() => {}); }}
               onDiscard={() => { const filters = issuesFilter.getIssueFilters(viewId); if (filters) resetExpression(EIssuesStoreType.PROJECT_VIEW, viewId, filters.richFilters); }}
               onCopied={(id) => router.push(`/${workspaceSlug}/projects/${projectId}/views/${id}`)} />
+            <ViewPipelineTotals context={{workspaceSlug,projectId,viewId}} />
             {projectViewWorkItemsFilter && (
               <WorkItemFiltersRow
                 filter={projectViewWorkItemsFilter}

@@ -32,5 +32,8 @@ try{
  await page.getByRole('button',{name:'Aplicar alias',exact:true}).last().click();
  assert.equal(await page.evaluate(()=>window.configStore.get(window.configContext).working.custom_view.columns.find(c=>c.field_id==='amount-A').alias),'Receita');
  assert.equal(writes.length,2,'column customization is view-local until explicit Save');
+ await page.getByRole('button',{name:'Totais',exact:true}).click();
+ await page.getByRole('button',{name:'Amount A — Todos',exact:true}).click();
+ assert.deepEqual(await page.evaluate(()=>window.configStore.get(window.configContext).working.custom_view.metrics),[{field_id:'amount-A',scopes:['all']}]);
  console.log('Real toolbar/typed conditions: AND decimal comparisons, no implicit writes, explicit save/error retention and discard passed.');
 }finally{await browser.close();}

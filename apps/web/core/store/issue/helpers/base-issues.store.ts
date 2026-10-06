@@ -536,6 +536,7 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
   ) {
     // perform an API call
     const response = await this.issueService.createIssue(workspaceSlug, projectId, data);
+    this.rootIssueStore.rootStore.viewMetrics.invalidate(projectId);
 
     // add Issue to Store
     this.addIssue(response, shouldUpdateList);
@@ -581,6 +582,7 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
 
       // call API to update the issue
       await this.issueService.patchIssue(workspaceSlug, projectId, issueId, data);
+      this.rootIssueStore.rootStore.viewMetrics.invalidate(projectId);
 
       // call fetch Parent Stats
       this.fetchParentStats(workspaceSlug, projectId);
@@ -606,6 +608,7 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
 
     // Male API call
     await this.issueService.deleteIssue(workspaceSlug, projectId, issueId);
+    this.rootIssueStore.rootStore.viewMetrics.invalidate(projectId);
     // Remove from Respective issue Id list
     runInAction(() => {
       this.removeIssueFromList(issueId);
@@ -628,6 +631,7 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
     this.updateParentStats(issueBeforeArchive, undefined);
     // Male API call
     const response = await this.issueArchiveService.archiveIssue(workspaceSlug, projectId, issueId);
+    this.rootIssueStore.rootStore.viewMetrics.invalidate(projectId);
     // call fetch Parent stats
     this.fetchParentStats(workspaceSlug, projectId);
     runInAction(() => {
@@ -682,6 +686,7 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
   async removeBulkIssues(workspaceSlug: string, projectId: string, issueIds: string[]) {
     // Make API call to bulk delete issues
     const response = await this.issueService.bulkDeleteIssues(workspaceSlug, projectId, { issue_ids: issueIds });
+    this.rootIssueStore.rootStore.viewMetrics.invalidate(projectId);
     // call fetch parent stats
     this.fetchParentStats(workspaceSlug, projectId);
     // Remove issues from the store
@@ -702,6 +707,7 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
    */
   bulkArchiveIssues = async (workspaceSlug: string, projectId: string, issueIds: string[]) => {
     const response = await this.issueService.bulkArchiveIssues(workspaceSlug, projectId, { issue_ids: issueIds });
+    this.rootIssueStore.rootStore.viewMetrics.invalidate(projectId);
 
     runInAction(() => {
       issueIds.forEach((issueId) => {
@@ -727,6 +733,7 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
     const issueIds = data.issue_ids;
     // make request to update issue properties
     await this.issueService.bulkOperations(workspaceSlug, projectId, data);
+    this.rootIssueStore.rootStore.viewMetrics.invalidate(projectId);
     // update issues in the store
     runInAction(() => {
       issueIds.forEach((issueId) => {

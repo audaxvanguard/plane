@@ -56,6 +56,7 @@ import type { IWorkspaceNotificationStore } from "./notifications/workspace-noti
 import { WorkspaceNotificationStore } from "./notifications/workspace-notifications.store";
 import type { IProjectPageStore } from "./pages/project-page.store";
 import { ProjectPageStore } from "./pages/project-page.store";
+import { ViewMetricsStore } from "./project/view-metrics.store";
 import { ViewConfigurationStore } from "./project/view-configuration.store";
 import { CustomFieldStore } from "./project/custom-field.store";
 import type { IProjectRootStore } from "./project";
@@ -79,6 +80,7 @@ export class CoreRootStore {
   projectRoot: IProjectRootStore;
   customFields: CustomFieldStore;
   viewConfiguration: ViewConfigurationStore;
+  viewMetrics: ViewMetricsStore;
   memberRoot: IMemberRootStore;
   cycle: ICycleStore;
   cycleFilter: ICycleFilterStore;
@@ -109,6 +111,7 @@ export class CoreRootStore {
   timelineStore: ITimelineStore;
 
   constructor() {
+    this.viewMetrics = new ViewMetricsStore();
     this.viewConfiguration = new ViewConfigurationStore(undefined, (view) => { this.projectView.viewMap[view.id] = view; });
     this.customFields = new CustomFieldStore();
     this.router = new RouterStore();
@@ -144,6 +147,8 @@ export class CoreRootStore {
   }
 
   resetOnSignOut() {
+    this.viewMetrics.reset();
+    this.viewMetrics = new ViewMetricsStore();
     this.viewConfiguration.reset();
     this.viewConfiguration = new ViewConfigurationStore(undefined, (view) => { this.projectView.viewMap[view.id] = view; });
     this.customFields = new CustomFieldStore();

@@ -1,6 +1,17 @@
 {
   "project_settings": {
     "custom_fields": {
+      "totals": "Totais",
+      "scope_all": "Todos",
+      "scope_open": "Abertos",
+      "scope_filtered": "Filtrados",
+      "item_count": "Quantidade de itens",
+      "missing_values": "Sem valor",
+      "overlap_warning": "Os grupos podem se sobrepor: não some os grupos para calcular o total geral.",
+      "open_scope_explanation": "Abertos segue o estado nativo do item, não o nome de uma etapa personalizada.",
+      "loading_totals": "Carregando totais…",
+      "totals_error": "Não foi possível carregar os totais.",
+
       "columns": "Colunas",
       "column_alias": "Alias",
       "apply_alias": "Aplicar alias",
