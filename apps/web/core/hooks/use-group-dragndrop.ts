@@ -13,6 +13,8 @@ import { ISSUE_FILTER_DEFAULT_DATA } from "@/store/issue/helpers/base-issues.sto
 import { useIssueDetail } from "./store/use-issue-detail";
 import { useIssues } from "./store/use-issues";
 import { useIssuesActions } from "./use-issues-actions";
+import {useCustomFields} from "./use-custom-fields";
+import {customStageMovePayload} from "@/helpers/project-view-config";
 
 type DNDStoreType =
   | EIssuesStoreType.PROJECT
@@ -34,6 +36,7 @@ export const useGroupIssuesDragNDrop = (
   subGroupBy?: TIssueGroupByOptions
 ) => {
   const { workspaceSlug } = useParams();
+  const customFields=useCustomFields();
 
   const {
     issue: { getIssueById },
@@ -106,6 +109,17 @@ export const useGroupIssuesDragNDrop = (
     )
       return;
 
+    if(groupBy?.startsWith("custom_field:")) {
+      try {
+        if(subGroupBy)throw new Error("Custom stages do not support subgroups.");
+        const issue=getIssueById(source.id);
+        if(!issue?.project_id||!destination.columnId||!updateIssue)throw new Error("Invalid stage destination.");
+        const field=customFields.getFields(issue.project_id).find(f=>f.id===groupBy.slice("custom_field:".length));
+        if(!field)throw new Error("Stage property is unavailable.");
+        await updateIssue(issue.project_id,issue.id,customStageMovePayload(field,destination.columnId));
+      }catch(error){setToast({title:"Error!",type:TOAST_TYPE.ERROR,message:error instanceof Error?error.message:"Failed to move work item"});}
+      return;
+    }
     await handleGroupDragDrop(
       source,
       destination,

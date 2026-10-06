@@ -9,13 +9,13 @@ import { observer } from "mobx-react";
 import { useParams } from "next/navigation";
 import useSWR from "swr";
 // plane constants
-import { ISSUE_DISPLAY_FILTERS_BY_PAGE, PROJECT_VIEW_TRACKER_ELEMENTS } from "@plane/constants";
+import { EUserPermissions, EUserPermissionsLevel, ISSUE_DISPLAY_FILTERS_BY_PAGE, PROJECT_VIEW_TRACKER_ELEMENTS } from "@plane/constants";
 import { EIssuesStoreType, EIssueLayoutTypes } from "@plane/types";
 // hooks
 import { ProjectLevelWorkItemFiltersHOC } from "@/components/work-item-filters/filters-hoc/project-level";
 import { WorkItemFiltersRow } from "@/components/work-item-filters/filters-row";
 import { useIssues } from "@/hooks/store/use-issues";
-import { useUser } from "@/hooks/store/user";
+import { useUser, useUserPermissions } from "@/hooks/store/user";
 import { useWorkItemFilters } from "@/hooks/store/work-item-filters/use-work-item-filters";
 import { useAppRouter } from "@/hooks/use-app-router";
 import { ViewConfigurationToolbar } from "@/components/views/configuration/toolbar";
@@ -56,6 +56,7 @@ export const ProjectViewLayoutRoot = observer(function ProjectViewLayoutRoot() {
   // hooks
   const { issuesFilter, issues } = useIssues(EIssuesStoreType.PROJECT_VIEW);
   const { data: currentUser } = useUser();
+  const {allowPermissions}=useUserPermissions();
   const { resetExpression } = useWorkItemFilters();
   const router = useAppRouter();
   const { getViewById } = useProjectView();
@@ -105,6 +106,7 @@ export const ProjectViewLayoutRoot = observer(function ProjectViewLayoutRoot() {
         {({ filter: projectViewWorkItemsFilter }) => (
           <div className="relative flex h-full w-full flex-col overflow-hidden">
             <ViewConfigurationToolbar key={`${workspaceSlug}:${projectId}:${viewId}`} context={{ workspaceSlug, projectId, viewId }}
+              canManageStages={allowPermissions([EUserPermissions.ADMIN],EUserPermissionsLevel.PROJECT,workspaceSlug,projectId)}
               canSave={projectView?.owned_by === currentUser?.id && !projectView?.is_locked}
               onApplied={() => { void issues.fetchIssuesWithExistingPagination(workspaceSlug, projectId, viewId, "mutation").catch(() => {}); }}
               onDiscard={() => { const filters = issuesFilter.getIssueFilters(viewId); if (filters) resetExpression(EIssuesStoreType.PROJECT_VIEW, viewId, filters.richFilters); }}

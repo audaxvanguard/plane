@@ -568,8 +568,9 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
     const issueBeforeUpdate = clone(this.rootIssueStore.issues.getIssueById(issueId));
     try {
       // Update the Respective Stores
-      this.rootIssueStore.issues.updateIssue(issueId, data);
-      this.updateIssueList({ ...issueBeforeUpdate, ...data } as TIssue, issueBeforeUpdate);
+      const optimisticData=data.custom_values?{...data,custom_values:{...issueBeforeUpdate?.custom_values,...data.custom_values}}:data;
+      this.rootIssueStore.issues.updateIssue(issueId, optimisticData);
+      this.updateIssueList({ ...issueBeforeUpdate, ...optimisticData } as TIssue, issueBeforeUpdate);
 
       // Check if should Sync
       if (!shouldSync) return;
@@ -583,6 +584,7 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
       // call API to update the issue
       await this.issueService.patchIssue(workspaceSlug, projectId, issueId, data);
       this.rootIssueStore.rootStore.viewMetrics.invalidate(projectId);
+      if(data.custom_values) await this.rootIssueStore.issueDetail.issue.fetchIssue(workspaceSlug,projectId,issueId);
 
       // call fetch Parent Stats
       this.fetchParentStats(workspaceSlug, projectId);

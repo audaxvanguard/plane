@@ -62,6 +62,11 @@ export class IssueKanBanViewStore implements IIssueKanBanViewStore {
 
   getCanUserDragDrop = computedFn(
     (group_by: TIssueGroupByOptions | undefined, sub_group_by: TIssueGroupByOptions | undefined) => {
+      if(group_by?.startsWith("custom_field:")&&!sub_group_by){
+        const projectId=this.rootStore.rootStore.projectRoot.project.currentProjectDetails?.id;
+        const field=projectId?this.rootStore.rootStore.customFields.getFields(projectId).find(f=>f.id===group_by.slice("custom_field:".length)):undefined;
+        return !!field&&!field.is_archived&&["select","checkbox"].includes(field.type);
+      }
       if (group_by && DRAG_ALLOWED_GROUPS.includes(group_by)) {
         if (!sub_group_by) return true;
         if (sub_group_by && DRAG_ALLOWED_GROUPS.includes(sub_group_by)) return true;
