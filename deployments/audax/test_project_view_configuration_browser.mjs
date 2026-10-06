@@ -35,5 +35,8 @@ try{
  await page.getByRole('button',{name:'Totais',exact:true}).click();
  await page.getByRole('button',{name:'Amount A — Todos',exact:true}).click();
  assert.deepEqual(await page.evaluate(()=>window.configStore.get(window.configContext).working.custom_view.metrics),[{field_id:'amount-A',scopes:['all']}]);
+ const countBeforeDrag=writes.length;
+ await page.getByTestId('view-column-custom:amount-A').dragTo(page.getByTestId('view-column-builtin:name'));
+ assert.equal(await page.evaluate(()=>window.configStore.get(window.configContext).working.custom_view.columns[0].field_id),'amount-A');assert.equal(writes.length,countBeforeDrag);
  console.log('Real toolbar/typed conditions: AND decimal comparisons, no implicit writes, explicit save/error retention and discard passed.');
 }finally{await browser.close();}
