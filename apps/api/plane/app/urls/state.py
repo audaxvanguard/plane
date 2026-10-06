@@ -9,6 +9,8 @@ from plane.app.views import StateViewSet, IntakeStateEndpoint
 
 
 urlpatterns = [
+    path('workspaces/<str:slug>/projects/<uuid:project_id>/states/<uuid:pk>/replacement-preview/', StateViewSet.as_view({'get':'replacement_preview'}), name='state-replacement-preview'),
+    path('workspaces/<str:slug>/projects/<uuid:project_id>/states/<uuid:pk>/replace-and-delete/', StateViewSet.as_view({'post':'replace_and_delete'}), name='state-replace-and-delete'),
     path(
         "workspaces/<str:slug>/projects/<uuid:project_id>/states/",
         StateViewSet.as_view({"get": "list", "post": "create"}),

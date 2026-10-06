@@ -10,6 +10,7 @@ import { emptyViewConfig, projectQueryConfig } from "@/helpers/project-view-conf
 import { useViewConfiguration } from "@/hooks/use-view-configuration";
 import { useProjectCustomFieldDefinitions } from "@/hooks/use-project-custom-field-definitions";
 import { ViewConditions } from "./conditions";
+import { ViewColumns } from "./columns";
 export const ViewConfigurationToolbar = observer(function ViewConfigurationToolbar({ context, canSave, onApplied, onDiscard, onCopied }: { context: ViewContext; canSave: boolean; onApplied: () => void; onDiscard: () => void; onCopied: (id: string) => void }) {
   const store = useViewConfiguration(), entry = store.get(context);
   const metadata = useProjectCustomFieldDefinitions(context.workspaceSlug, context.projectId);
@@ -18,6 +19,7 @@ export const ViewConfigurationToolbar = observer(function ViewConfigurationToolb
   const [error, setError] = useState(false);
   const [copying, setCopying] = useState(false);
   const [conditionsOpen, setConditionsOpen] = useState(false);
+  const [columnsOpen, setColumnsOpen] = useState(false);
   if (!entry) return null;
   const query = projectQueryConfig(entry.working);
   const config = query.version ? query : emptyViewConfig();
@@ -30,10 +32,12 @@ export const ViewConfigurationToolbar = observer(function ViewConfigurationToolb
       <Button variant="secondary" size="sm" disabled={!entry.dirty || entry.saving} onClick={() => { store.discard(context); onDiscard(); onApplied(); }}>{t(key + "discard_view")}</Button>
       <Input inputSize="xs" aria-label={t(key + "copy_name")} value={name} onChange={(event) => setName(event.target.value)} />
       <Button variant="secondary" size="sm" disabled={!name.trim() || entry.saved.access === 0} loading={copying} onClick={() => { void copy(); }}>{t(key + "save_as")}</Button>
+      <Button variant="secondary" size="sm" onClick={() => setColumnsOpen(!columnsOpen)}>{t(key + "columns")}</Button>
       <Button variant="secondary" size="sm" onClick={() => setConditionsOpen(!conditionsOpen)}>{t(key + "conditions")}</Button>
     </div>
     <p className="text-11 text-secondary">{t(key + (entry.saved.access === 0 ? "private_copy_unavailable" : "native_copy_access"))}</p>
     {(error || entry.error) && <p role="alert" className="text-11 text-danger-primary">{t(key + "view_save_error")}</p>}
+    {columnsOpen && <ViewColumns fields={metadata.fields} columns={config.columns.length ? config.columns : [{kind:"builtin",key:"name"}]} onChange={(columns) => { store.change(context,{custom_view:{...emptyViewConfig(),...config,version:2,columns}}); onApplied(); }} />}
     {conditionsOpen && <ViewConditions fields={metadata.fields} conditions={config.conditions} onChange={(conditions) => { store.change(context, { custom_view: { ...config, conditions } }); onApplied(); }} />}
   </div>;
 });

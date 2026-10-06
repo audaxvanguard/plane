@@ -17,7 +17,8 @@ from rest_framework import status
 from .. import BaseViewSet, BaseAPIView
 from plane.app.serializers import StateSerializer
 from plane.app.permissions import ROLE, allow_permission
-from plane.db.models import State, Issue
+from plane.db.models import State, Issue, Project
+from plane.app.services.project_stage_operations import preview_state_replacement, replace_and_delete_state
 from plane.utils.cache import invalidate_cache
 
 
@@ -100,6 +101,20 @@ class StateViewSet(BaseViewSet):
             return Response(state_dict, status=status.HTTP_200_OK)
 
         return Response(states, status=status.HTTP_200_OK)
+
+    @allow_permission([ROLE.ADMIN])
+    def replacement_preview(self, request, slug, project_id, pk):
+        project=Project.objects.get(pk=project_id,workspace__slug=slug)
+        return Response(preview_state_replacement(user=request.user,project=project,state_id=pk))
+
+    @invalidate_cache(path="workspaces/:slug/states/", url_params=True, user=False)
+    @allow_permission([ROLE.ADMIN])
+    def replace_and_delete(self, request, slug, project_id, pk):
+        if request.data.get('confirmed') is not True:
+            return Response({'error':'Explicit confirmation is required.'},status=status.HTTP_400_BAD_REQUEST)
+        project=Project.objects.get(pk=project_id,workspace__slug=slug)
+        replace_and_delete_state(user=request.user,project=project,state_id=pk,replacement_state_id=request.data.get('replacement_state_id'),expected_item_count=request.data.get('expected_item_count'))
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @invalidate_cache(path="workspaces/:slug/states/", url_params=True, user=False)
     @allow_permission([ROLE.ADMIN])

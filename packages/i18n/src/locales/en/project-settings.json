@@ -1,6 +1,15 @@
 {
   "project_settings": {
     "custom_fields": {
+      "columns": "Columns",
+      "column_alias": "Alias",
+      "apply_alias": "Apply alias",
+      "reset_alias": "Reset alias",
+      "move_up": "Move up",
+      "move_down": "Move down",
+      "hide_column": "Hide column",
+      "invalid_alias": "Use 1–255 Unicode characters.",
+
       "unsaved": "Unsaved changes",
       "save_view": "Save view",
       "discard_view": "Discard",

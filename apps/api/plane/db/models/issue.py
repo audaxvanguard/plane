@@ -180,8 +180,18 @@ class Issue(ChangeTrackerMixin, ProjectBaseModel):
         db_table = "issues"
         ordering = ("-created_at",)
 
+    @transaction.atomic
     def save(self, *args, **kwargs):
         self._ensure_default_state()
+        if self._state.adding:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT pg_advisory_xact_lock(%s)", [convert_uuid_to_integer(self.project_id)])
+        if self.state_id:
+            active_state = self.state.__class__.objects.select_for_update().filter(id=self.state_id,project_id=self.project_id).first()
+            if active_state is None:
+                from django.core.exceptions import ValidationError
+                raise ValidationError("State is no longer available in this project.")
+            self.state = active_state
         kwargs = self._sync_completed_at(kwargs)
 
         if self._state.adding:

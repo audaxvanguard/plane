@@ -4,7 +4,7 @@
 
 # Django imports
 from django.conf import settings
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
 
 # Module imports
@@ -84,6 +84,7 @@ class DraftIssue(WorkspaceBaseModel):
         db_table = "draft_issues"
         ordering = ("-created_at",)
 
+    @transaction.atomic
     def save(self, *args, **kwargs):
         if self.state is None:
             try:
@@ -110,6 +111,13 @@ class DraftIssue(WorkspaceBaseModel):
             except ImportError:
                 pass
 
+        if self.state_id:
+            from plane.db.models import State
+            from django.core.exceptions import ValidationError
+            active_state = State.objects.select_for_update().filter(id=self.state_id,project_id=self.project_id).first()
+            if active_state is None:
+                raise ValidationError("State is no longer available in this project.")
+            self.state = active_state
         if self._state.adding:
             # Strip the html tags using html parser
             self.description_stripped = (

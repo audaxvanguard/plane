@@ -26,5 +26,11 @@ try{
  assert.equal(writes[1].custom_view.conditions[0].value,'1234.56');
  await page.getByRole('button',{name:'Remover condição',exact:true}).click();await page.getByRole('button',{name:'Descartar',exact:true}).click();
  assert.equal(await page.evaluate(()=>window.configStore.get(window.configContext).working.custom_view.conditions.length),1,'discard restores persisted conditions');
+ await page.getByRole('button',{name:'Colunas',exact:true}).click();
+ await page.getByRole('button',{name:'+ Amount A',exact:true}).click();
+ await page.getByLabel('Alias — Amount A',{exact:true}).fill('Receita');
+ await page.getByRole('button',{name:'Aplicar alias',exact:true}).last().click();
+ assert.equal(await page.evaluate(()=>window.configStore.get(window.configContext).working.custom_view.columns.find(c=>c.field_id==='amount-A').alias),'Receita');
+ assert.equal(writes.length,2,'column customization is view-local until explicit Save');
  console.log('Real toolbar/typed conditions: AND decimal comparisons, no implicit writes, explicit save/error retention and discard passed.');
 }finally{await browser.close();}
