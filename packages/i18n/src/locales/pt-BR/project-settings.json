@@ -1,6 +1,25 @@
 {
   "project_settings": {
     "custom_fields": {
+      "shared_stages_notice": "As definições compartilhadas afetam todas as visualizações do projeto. A aposentadoria de opções preserva os valores existentes.",
+      "manage_native_stages": "Gerenciar estados compartilhados",
+      "manage_custom_stages": "Gerenciar opções compartilhadas",
+      "replace_state": "Substituir e remover estado",
+      "replace_state_notice": "Os itens, incluindo rascunhos e itens excluídos, serão reatribuídos atomicamente. O histórico será preservado. Os filtros salvos não serão reescritos.",
+      "replacement_error": "A substituição falhou. Os dados foram preservados; atualize a prévia se a quantidade de itens mudou.",
+      "affected_items": "Itens afetados",
+      "reference_warning": "Visualizações visíveis que referenciam este estado",
+      "replacement_state": "Estado substituto",
+      "confirm_replacement": "Confirmo a substituição e remoção.",
+
+      "stages": "Etapas",
+      "native_stages": "Estados nativos",
+      "local_stages_notice": "Apelidos, ordem e visibilidade alteram apenas esta visualização. As definições compartilhadas não são alteradas.",
+      "hide_stage": "Ocultar etapa",
+      "restore_stage": "Restaurar etapa",
+      "hidden_stages_notice": "Etapas ocultas:",
+      "restore_all_stages": "Restaurar todas as etapas",
+
       "totals": "Totais",
       "scope_all": "Todos",
       "scope_open": "Abertos",

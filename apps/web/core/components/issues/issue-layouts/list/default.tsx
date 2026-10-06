@@ -33,6 +33,7 @@ import { IssueBulkOperationsRoot } from "@/components/issues/bulk-operations";
 import { useBulkOperationStatus } from "@/hooks/use-bulk-operation-status";
 // utils
 import type { GroupDropLocation } from "../utils";
+import {useViewStages} from "@/hooks/use-view-stages";
 import { getGroupByColumns, isWorkspaceLevel, isSubGrouped } from "../utils";
 import { ListGroup } from "./list-group";
 import type { TRenderQuickActions } from "./list-view-types";
@@ -89,7 +90,9 @@ export const List = observer(function List(props: IList) {
 
   const containerRef = useRef<HTMLDivElement | null>(null);
 
+  const stages=useViewStages(group_by);
   const groups = getGroupByColumns({
+    stages,
     groupBy: group_by as GroupByColumnTypes,
     translate: t,
     includeNone: true,

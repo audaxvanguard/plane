@@ -1,6 +1,25 @@
 {
   "project_settings": {
     "custom_fields": {
+      "shared_stages_notice": "Shared definitions affect every project view. Retiring options preserves existing values.",
+      "manage_native_stages": "Manage shared states",
+      "manage_custom_stages": "Manage shared options",
+      "replace_state": "Replace and remove state",
+      "replace_state_notice": "Items, including drafts and deleted items, are reassigned atomically. Activity history is preserved. Saved filters are not rewritten.",
+      "replacement_error": "Replacement failed. Inputs are retained; refresh the preview if the affected items changed.",
+      "affected_items": "Affected items",
+      "reference_warning": "Visible saved views referencing this state",
+      "replacement_state": "Replacement state",
+      "confirm_replacement": "I confirm the replacement and removal.",
+
+      "stages": "Stages",
+      "native_stages": "Native states",
+      "local_stages_notice": "Stage aliases, order and visibility affect only this view. Shared definitions remain unchanged.",
+      "hide_stage": "Hide stage",
+      "restore_stage": "Restore stage",
+      "hidden_stages_notice": "Hidden stages:",
+      "restore_all_stages": "Restore all stages",
+
       "totals": "Totals",
       "scope_all": "All",
       "scope_open": "Open",

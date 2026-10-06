@@ -19,10 +19,11 @@ import { useUserPermissions } from "@/hooks/store/user";
 type TProjectState = {
   workspaceSlug: string;
   projectId: string;
+  onDeleteState?: (stateId:string)=>Promise<void>;
 };
 
 export const ProjectStateRoot = observer(function ProjectStateRoot(props: TProjectState) {
-  const { workspaceSlug, projectId } = props;
+  const { workspaceSlug, projectId, onDeleteState } = props;
   // hooks
   const {
     groupedProjectStates,
@@ -55,12 +56,12 @@ export const ProjectStateRoot = observer(function ProjectStateRoot(props: TProje
       createState: async (data: Partial<IState>) => createState(workspaceSlug, projectId, data),
       updateState: async (stateId: string, data: Partial<IState>) =>
         updateState(workspaceSlug, projectId, stateId, data),
-      deleteState: async (stateId: string) => deleteState(workspaceSlug, projectId, stateId),
+      deleteState: async (stateId: string) => onDeleteState ? onDeleteState(stateId) : deleteState(workspaceSlug, projectId, stateId),
       moveStatePosition: async (stateId: string, data: Partial<IState>) =>
         moveStatePosition(workspaceSlug, projectId, stateId, data),
       markStateAsDefault: async (stateId: string) => markStateAsDefault(workspaceSlug, projectId, stateId),
     }),
-    [workspaceSlug, projectId, createState, moveStatePosition, updateState, deleteState, markStateAsDefault]
+    [workspaceSlug, projectId, createState, moveStatePosition, updateState, deleteState, markStateAsDefault,onDeleteState]
   );
 
   // Loader

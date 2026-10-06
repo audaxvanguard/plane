@@ -1,6 +1,6 @@
 // Copyright (c) 2023-present Plane Software, Inc. and contributors
 // SPDX-License-Identifier: AGPL-3.0-only
-import type { IProjectView, TCustomViewPresentationColumn, TProjectCustomViewConfig, TProjectCustomViewConfigV2, TCustomBuiltinColumn, TProjectCustomField } from "@plane/types";
+import type { IProjectView, TCustomViewPresentationColumn, TProjectCustomViewConfig, TProjectCustomViewConfigV2, TCustomBuiltinColumn, TProjectCustomField, TViewStagePresentation } from "@plane/types";
 export type ViewContext = { workspaceSlug: string; projectId: string; viewId: string };
 export type ViewConfiguration = Pick<IProjectView, "display_filters" | "display_properties" | "rich_filters"> & { custom_view: TProjectCustomViewConfig | Record<string, never> };
 export function copyConfiguration<T>(value: T): T { return JSON.parse(JSON.stringify(value)); }
@@ -34,6 +34,24 @@ export function resolveViewColumns(config: TProjectCustomViewConfig | Record<str
     const field = metadata.find((f) => f.id === column.field_id);
     return [{ key, kind: column.kind, reference: column.field_id, field, title: column.alias ? validateViewAlias(column.alias) : field?.name ?? column.field_id, readOnly: !field || field.is_archived, archived: !!field?.is_archived }];
   });
+}
+export function applyStagePresentation<T extends {id:string;name:string}>(columns:T[],stages:TViewStagePresentation|null|undefined):T[] {
+  if(!stages)return columns;
+  const ordered=[...columns].sort((a,b)=>{
+    const ai=stages.order.indexOf(a.id),bi=stages.order.indexOf(b.id);
+    return (ai<0?stages.order.length:ai)-(bi<0?stages.order.length:bi);
+  });
+  return ordered.filter(column=>!stages.hidden.includes(column.id)).map(column=>({...column,name:stages.aliases[column.id]??column.name}));
+}
+export function customStageMovePayload(field:TProjectCustomField,groupId:string) {
+  if(field.is_archived)throw new Error("Archived properties are read-only.");
+  if(!["select","checkbox"].includes(field.type))throw new Error("Unsupported stage source.");
+  let value:string|boolean|null=null;
+  if(groupId!=="unset") {
+    if(field.type==="checkbox") { if(!["true","false"].includes(groupId))throw new Error("Invalid stage."); value=groupId==="true"; }
+    else { const option=field.options.find(option=>option.id===groupId&&!option.is_retired);if(!option)throw new Error("Stage is unavailable.");value=option.id; }
+  }
+  return {custom_values:{[field.id]:value}};
 }
 export function emptyViewConfig(): TProjectCustomViewConfigV2 {
   return { version: 2, columns: [], conditions: [], sort: null, group_by: null, metrics: [], stages: null, count_scopes: [] };

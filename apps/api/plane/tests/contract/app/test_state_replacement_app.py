@@ -40,6 +40,22 @@ def test_stale_draft_assignment_is_rejected(crm_project):
     with pytest.raises(ValidationError):
         DraftIssue.objects.create(project=crm_project,workspace=crm_project.workspace,name='Draft',state=source)
 
+@pytest.mark.parametrize('model_name', ['Issue','DraftIssue'])
+def test_bulk_writes_cannot_assign_retired_state(crm_project,model_name):
+    from django.db import transaction, IntegrityError
+    from django.utils import timezone
+    from plane import db
+    from plane.db.models import State, Issue, DraftIssue
+    Model={'Issue':Issue,'DraftIssue':DraftIssue}[model_name]
+    source=State.objects.create(project=crm_project,workspace=crm_project.workspace,name='Retired bulk',group='started')
+    target=State.objects.create(project=crm_project,workspace=crm_project.workspace,name='Active bulk',group='started')
+    item=Model.objects.create(project=crm_project,workspace=crm_project.workspace,name='Bulk',state=target)
+    source.deleted_at=timezone.now();source.save(update_fields=['deleted_at'])
+    with pytest.raises(IntegrityError),transaction.atomic():
+        Model.all_objects.filter(id=item.id).update(state_id=source.id)
+    item.refresh_from_db();assert item.state_id==target.id
+
+
 def test_default_state_is_not_replaceable(crm_project,crm_admin_client):
     source=State.objects.create(project=crm_project,workspace=crm_project.workspace,name='Default',default=True)
     url=f'/api/workspaces/{crm_project.workspace.slug}/projects/{crm_project.id}/states/{source.id}/replacement-preview/'

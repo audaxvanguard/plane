@@ -12,6 +12,7 @@ import { useProjectCustomFieldDefinitions } from "@/hooks/use-project-custom-fie
 import { ViewConditions } from "./conditions";
 import { ViewColumns } from "./columns";
 import { ViewMetricsConfiguration } from "./metrics";
+import { ViewStagesRoot } from "./stages-root";
 export const ViewConfigurationToolbar = observer(function ViewConfigurationToolbar({ context, canSave, onApplied, onDiscard, onCopied }: { context: ViewContext; canSave: boolean; onApplied: () => void; onDiscard: () => void; onCopied: (id: string) => void }) {
   const store = useViewConfiguration(), entry = store.get(context);
   const metadata = useProjectCustomFieldDefinitions(context.workspaceSlug, context.projectId);
@@ -22,6 +23,7 @@ export const ViewConfigurationToolbar = observer(function ViewConfigurationToolb
   const [conditionsOpen, setConditionsOpen] = useState(false);
   const [columnsOpen, setColumnsOpen] = useState(false);
   const [metricsOpen, setMetricsOpen] = useState(false);
+  const [stagesOpen, setStagesOpen] = useState(false);
   if (!entry) return null;
   const query = projectQueryConfig(entry.working);
   const config = query.version ? query : emptyViewConfig();
@@ -34,12 +36,15 @@ export const ViewConfigurationToolbar = observer(function ViewConfigurationToolb
       <Button variant="secondary" size="sm" disabled={!entry.dirty || entry.saving} onClick={() => { store.discard(context); onDiscard(); onApplied(); }}>{t(key + "discard_view")}</Button>
       <Input inputSize="xs" aria-label={t(key + "copy_name")} value={name} onChange={(event) => setName(event.target.value)} />
       <Button variant="secondary" size="sm" disabled={!name.trim() || entry.saved.access === 0} loading={copying} onClick={() => { void copy(); }}>{t(key + "save_as")}</Button>
+      <Button variant="secondary" size="sm" onClick={() => setStagesOpen(!stagesOpen)}>{t(key + "stages")}</Button>
       <Button variant="secondary" size="sm" onClick={() => setMetricsOpen(!metricsOpen)}>{t(key + "totals")}</Button>
       <Button variant="secondary" size="sm" onClick={() => setColumnsOpen(!columnsOpen)}>{t(key + "columns")}</Button>
       <Button variant="secondary" size="sm" onClick={() => setConditionsOpen(!conditionsOpen)}>{t(key + "conditions")}</Button>
     </div>
     <p className="text-11 text-secondary">{t(key + (entry.saved.access === 0 ? "private_copy_unavailable" : "native_copy_access"))}</p>
+    {config.version===2 && !!config.stages?.hidden.length && <div role="status" className="flex items-center gap-2 text-11"><span>{t(key+"hidden_stages_notice")} {config.stages.hidden.length}</span><Button variant="secondary" size="sm" onClick={()=>{store.change(context,{custom_view:{...config,stages:{...config.stages!,hidden:[]}}});onApplied();}}>{t(key+"restore_all_stages")}</Button></div>}
     {(error || entry.error) && <p role="alert" className="text-11 text-danger-primary">{t(key + "view_save_error")}</p>}
+    {stagesOpen && <ViewStagesRoot context={context} canManage={metadata.canManage} onChanged={onApplied} fields={metadata.fields} config={{...emptyViewConfig(),...config,version:2}} onChange={(custom_view,group_by)=>{store.change(context,{custom_view,display_filters:{...entry.working.display_filters,group_by:group_by as typeof entry.working.display_filters.group_by,sub_group_by:null}});onApplied();}}/>}
     {metricsOpen && <ViewMetricsConfiguration fields={metadata.fields} config={{...emptyViewConfig(),...config,version:2}} onChange={(custom_view)=>{store.change(context,{custom_view});onApplied();}} />}
     {columnsOpen && <ViewColumns fields={metadata.fields} columns={config.columns.length ? config.columns : [{kind:"builtin",key:"name"}]} onChange={(columns) => { store.change(context,{custom_view:{...emptyViewConfig(),...config,version:2,columns}}); onApplied(); }} />}
     {conditionsOpen && <ViewConditions fields={metadata.fields} conditions={config.conditions} onChange={(conditions) => { store.change(context, { custom_view: { ...config, conditions } }); onApplied(); }} />}
