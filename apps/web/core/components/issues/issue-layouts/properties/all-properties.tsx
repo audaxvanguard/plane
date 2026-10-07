@@ -86,7 +86,7 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
   const columns=workspaceSlug&&projectId&&viewId&&projectId.toString()===issue.project_id?configurations.get({workspaceSlug:workspaceSlug.toString(),projectId:projectId.toString(),viewId:viewId.toString()})?.working.custom_view.columns:undefined;
   const customColumns=columns?.length?columns.filter(c=>c.kind==="custom"):null;
   const customSelection=customColumns?.map(c=>c.field_id)??displayProperties?.custom_fields;
-  const customAliases=Object.fromEntries(customColumns?.filter(c=>c.alias).map(c=>[c.field_id,c.alias!])??[]);
+  const customAliases=Object.fromEntries(customColumns?.flatMap(c=>"alias" in c && typeof c.alias==="string"?[[c.field_id,c.alias]]:[])??[]);
 
   // derived values
   const stateDetails = getStateById(issue.state_id);
