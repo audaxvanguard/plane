@@ -111,7 +111,8 @@ def test_replacement_failure_rolls_back_every_item_and_history(crm_project, crm_
 def test_concurrent_bulk_assignment_cannot_land_on_retired_state(crm_project, crm_admin, monkeypatch):
     from concurrent.futures import ThreadPoolExecutor
     from threading import Event
-    from django.db import close_old_connections, connections, IntegrityError
+    from django.db import close_old_connections, connections, connection, IntegrityError
+    import time
     from plane.app.services import project_stage_operations as service
     source = State.objects.create(project=crm_project, name='Concurrent source', group='started')
     target = State.objects.create(project=crm_project, name='Concurrent target', group='started')
@@ -119,9 +120,19 @@ def test_concurrent_bulk_assignment_cannot_land_on_retired_state(crm_project, cr
     newcomer = Issue.objects.create(project=crm_project, name='New assignment', state=target)
     removal_locked = Event(); assignment_started = Event()
     original = service.track_state
+    assignment_pid = []
     def paused_track(*args, **kwargs):
         removal_locked.set()
         assert assignment_started.wait(10)
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline:
+            with connection.cursor() as cursor:
+                cursor.execute('SELECT wait_event_type FROM pg_stat_activity WHERE pid=%s', [assignment_pid[0]])
+                if cursor.fetchone() == ('Lock',):
+                    break
+            time.sleep(0.01)
+        else:
+            pytest.fail('Assignment did not actually block on the locked source state')
         return original(*args, **kwargs)
     monkeypatch.setattr(service, 'track_state', paused_track)
     def remove():
@@ -133,6 +144,9 @@ def test_concurrent_bulk_assignment_cannot_land_on_retired_state(crm_project, cr
         close_old_connections()
         try:
             assert removal_locked.wait(10)
+            with connection.cursor() as cursor:
+                cursor.execute('SELECT pg_backend_pid()')
+                assignment_pid.append(cursor.fetchone()[0])
             assignment_started.set()
             with pytest.raises(IntegrityError):
                 Issue.objects.filter(pk=newcomer.pk).update(state_id=source.id)

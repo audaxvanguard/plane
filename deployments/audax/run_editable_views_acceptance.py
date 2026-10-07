@@ -72,6 +72,15 @@ def diagnostics(label):
     print(f'Resource checkpoint {label}: slice bytes={group.joinpath("memory.current").read_text().strip()}, '
           f'events={group.joinpath("memory.events").read_text().splitlines()}, '
           f'host PSI={Path("/proc/pressure/memory").read_text().splitlines()}', flush=True)
+    own_group = Path('/sys/fs/cgroup') / Path('/proc/self/cgroup').read_text().strip().partition('::')[2].lstrip('/')
+    print(f'Acceptance process cgroup: {own_group}, limit={own_group.joinpath("memory.max").read_text().strip()}, '
+          f'events={own_group.joinpath("memory.events").read_text().splitlines()}', flush=True)
+    for service in ('compiled-api', 'compiled-web', 'compiled-proxy', 'test-db'):
+        result = subprocess.run(['docker', 'inspect', f'audax-custom-fields-test-{service}-1', '--format', '{{.State.Pid}}'], capture_output=True, text=True)
+        if result.returncode == 0 and result.stdout.strip() != '0':
+            path = Path('/sys/fs/cgroup') / Path(f'/proc/{result.stdout.strip()}/cgroup').read_text().strip().partition('::')[2].lstrip('/')
+            print(f'Private container {service}: bytes={path.joinpath("memory.current").read_text().strip()}, '
+                  f'limit={path.joinpath("memory.max").read_text().strip()}, events={path.joinpath("memory.events").read_text().splitlines()}', flush=True)
 
 
 def main(revision):

@@ -57,7 +57,17 @@ view = IssueView.objects.create(workspace=w, project=p, name='Compiled pipeline'
     custom_view={'version': 2, 'columns': [{'kind': 'builtin', 'key': 'name'}, {'kind': 'custom', 'field_id': str(amount.id), 'alias': 'Total BRL'}],
         'conditions': [], 'sort': None, 'group_by': None, 'metrics': [{'field_id': str(amount.id), 'scopes': ['all', 'open', 'filtered']}],
         'stages': None, 'count_scopes': ['all', 'open', 'filtered']})
+other = Project.objects.create(workspace=w, name='Other project context', identifier='OTHER', created_by=owner)
+ProjectMember.objects.create(workspace=w, project=other, member=owner, role=20)
+State.objects.create(project=other, name='Backlog', group='backlog', default=True)
+other_field = ProjectCustomField.objects.create(project=other, type='currency', name='Receita')
+other_view = IssueView.objects.create(workspace=w, project=other, name='Other pipeline', owned_by=owner, created_by=owner,
+    display_filters={'layout':'kanban','group_by':'state','sub_issue':True},
+    custom_view={'version':2,'columns':[{'kind':'builtin','key':'name'},{'kind':'custom','field_id':str(other_field.id),'alias':'Other total'}],
+        'conditions':[],'sort':None,'group_by':None,'metrics':[{'field_id':str(other_field.id),'scopes':['all']}],
+        'stages':None,'count_scopes':['all']})
 print('COMPILED_FIXTURE=' + json.dumps({'workspace': w.slug, 'project': str(p.id), 'view': str(view.id),
     'field': str(amount.id), 'stage': str(stage.id), 'option': str(option.id), 'zero': ids['Zero'],
     'source': str(source.id), 'target': str(target.id), 'replacement_item': str(replacement_item.id),
+    'other_project':str(other.id), 'other_view':str(other_view.id), 'other_field':str(other_field.id),
     'session': session(owner), 'second_session': session(viewer)}))

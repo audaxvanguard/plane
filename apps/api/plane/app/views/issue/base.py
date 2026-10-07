@@ -291,7 +291,10 @@ class IssueViewSet(BaseViewSet):
             view_id=request.GET.get('view_id'), override=request.GET.get('custom_view'))
         issue_queryset = apply_custom_conditions(issue_queryset, custom_config)
         custom_group_field = None
-        if custom_config.get('group_by'):
+        # Saved stage presentation must not override the active layout's wire
+        # shape: spreadsheets/timelines need flat rows; calendars group by date.
+        # With no explicit layout, retain the legacy custom-group API behavior.
+        if custom_config.get('group_by') and request.GET.get('layout') not in {'spreadsheet', 'gantt', 'calendar'}:
             group_id = custom_config['group_by']['field_id']
             custom_group_field = next(iter(resolve_fields(project.id, [group_id], for_write=False).values()))
             issue_queryset = issue_queryset.annotate(**get_custom_group(custom_group_field))

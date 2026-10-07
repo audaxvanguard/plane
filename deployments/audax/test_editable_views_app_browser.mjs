@@ -36,6 +36,16 @@ async function total(page, expectedEnding = "01") {
     { id: data.field, ending: expectedEnding }
   );
 }
+async function spreadsheet(page) {
+  await page.waitForLoadState("networkidle");
+  await page
+    .locator("div.bg-layer-3.p-1")
+    .filter({ has: page.locator("button") })
+    .getByRole("button")
+    .nth(3)
+    .click();
+  await page.getByRole("columnheader").first().waitFor();
+}
 const saveName = /^(Save view|Salvar visualização)$/;
 try {
   const first = await session(data.session);
@@ -53,6 +63,14 @@ try {
     .click();
   await page.getByTestId("pipeline-hidden-items").waitFor();
   assert.match(await page.getByTestId("pipeline-hidden-items").textContent(), /: 2$/);
+  await total(page);
+  await page
+    .getByRole("button", { name: /^(Hide stage|Ocultar etapa)$/ })
+    .first()
+    .click();
+  await page.waitForFunction(() =>
+    document.querySelector('[data-testid="pipeline-hidden-items"]')?.textContent.endsWith(": 3")
+  );
   await total(page);
   await page
     .getByRole("button", { name: /^(Restore all stages|Restaurar todas as etapas)$/ })
@@ -73,6 +91,18 @@ try {
     .nth(3)
     .click();
   await page.getByText("Total BRL", { exact: true }).waitFor();
+  const layouts = page
+    .locator("div.bg-layer-3.p-1")
+    .filter({ has: page.locator("button") })
+    .getByRole("button");
+  for (let index = 0; index < (await layouts.count()); index++) {
+    if (await layouts.nth(index).isEnabled()) {
+      await layouts.nth(index).click();
+      await total(page);
+    }
+  }
+  await layouts.nth(3).click();
+  await page.getByText("Total BRL", { exact: true }).waitFor();
   assert.ok((await page.getByRole("row").count()) >= 3);
   const cell = page.getByRole("row").filter({ hasText: "Zero" }).getByTestId(`custom-field-${data.field}`);
   await cell.getByRole("textbox").fill("0,10");
@@ -89,19 +119,31 @@ try {
   assert.equal(await cell.getByRole("textbox").inputValue(), "0,10");
   await cell.getByRole("button", { name: /^(Save|Salvar)$/ }).click();
   await total(page, "11");
-  const historyResponse = await first.request.get(`${project}/issues/${data.zero}/history/`);
+  const historyResponse = await first.request.get(
+    `${project}/issues/${data.zero}/history/?activity_type=issue-property`
+  );
   assert.equal(historyResponse.status(), 200);
   const history = await historyResponse.json();
   assert.ok(
     history.some((row) => row.field === `custom_field:${data.field}` && JSON.parse(row.new_value).value === "0.10")
   );
-  await page.getByRole("button", { name: /^(Columns|Colunas)$/ }).click();
-  await page.getByRole("textbox", { name: /Alias — (Receita|Total BRL)/ }).fill("Temporary alias");
+  await page.getByRole("row").filter({ hasText: "Zero" }).getByText("Zero", { exact: true }).click();
   await page
-    .getByRole("button", { name: /^(Apply alias|Aplicar alias)$/ })
-    .last()
-    .click();
+    .getByText(/^R\$\s*0,10$/)
+    .first()
+    .waitFor();
+  await page.goto(`${base}/${data.workspace}/projects/${data.project}/views/${data.view}`, {
+    waitUntil: "domcontentloaded",
+  });
+  await spreadsheet(page);
+  await total(page, "11");
+  await page.getByRole("button", { name: /^(Columns|Colunas)$/ }).click();
+  const currencyColumn = page.getByTestId(`view-column-custom:${data.field}`);
+  await currencyColumn.getByRole("textbox").fill("Temporary alias");
+  await currencyColumn.getByRole("button", { name: /^(Apply alias|Aplicar alias)$/ }).click();
   await page.getByText("Temporary alias", { exact: true }).waitFor();
+  assert.ok((await page.getByRole("row").count()) >= 4);
+  await total(page, "11");
   assert.equal((await saved(first)).custom_view.columns.find((c) => c.field_id === data.field).alias, "Total BRL");
   const second = await session(data.second_session);
   const secondPage = await second.newPage();
@@ -109,6 +151,8 @@ try {
   await secondPage.goto(`${base}/${data.workspace}/projects/${data.project}/views/${data.view}`, {
     waitUntil: "domcontentloaded",
   });
+  await spreadsheet(secondPage);
+  await secondPage.getByText("Total BRL", { exact: true }).waitFor();
   await total(secondPage, "11");
   assert.equal(await secondPage.getByText("Temporary alias", { exact: true }).count(), 0);
   assert.ok(await secondPage.getByRole("button", { name: saveName }).isDisabled());
@@ -139,6 +183,15 @@ try {
     "Temporary alias"
   );
   await page.reload();
+  await spreadsheet(page);
+  await page.getByText("Temporary alias", { exact: true }).waitFor();
+  await total(page, "11");
+  const renamed = await first.request.patch(`${project}/custom-fields/${data.field}/`, {
+    data: { name: "Renamed Receita" },
+  });
+  assert.equal(renamed.status(), 200);
+  await page.reload();
+  await spreadsheet(page);
   await page.getByText("Temporary alias", { exact: true }).waitFor();
   await total(page, "11");
   const preview = await first.request.get(`${project}/states/${data.source}/replacement-preview/`);
@@ -194,6 +247,12 @@ try {
   assert.notEqual(copy.id, data.view);
   await page.waitForURL((url) => url.pathname.includes(copy.id));
   await total(page, "11");
+  await page.goto(`${base}/${data.workspace}/projects/${data.other_project}/views/${data.other_view}`, {
+    waitUntil: "domcontentloaded",
+  });
+  await page.getByTestId(`pipeline-total-${data.other_field}-all`).waitFor();
+  assert.match(await page.getByTestId(`pipeline-total-${data.other_field}-all`).textContent(), /R\$.*0,00/);
+  assert.equal(await page.getByTestId(`pipeline-total-${data.field}-all`).count(), 0);
   // Independently reproduced with the unchanged production web image. Keep this
   // explicit allowlist; every other compiled runtime error remains a failure.
   assert.deepEqual(
