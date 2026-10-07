@@ -17,6 +17,30 @@ test("stage aliases/order/hiding do not mutate definitions or query membership",
   );
   assert.equal(columns[1].name, "B");
 });
+test("stage presentation supports ES2022 without Array.toSorted and preserves source order", () => {
+  const descriptor = Object.getOwnPropertyDescriptor(Array.prototype, "toSorted");
+  const columns = Object.freeze([
+    { id: "a", name: "A" },
+    { id: "b", name: "B" },
+  ]);
+  // Simulate ES2022 for this synchronous test, restoring the capability in finally.
+  /* eslint-disable no-extend-native */
+  try {
+    Object.defineProperty(Array.prototype, "toSorted", { value: undefined, configurable: true });
+    assert.deepEqual(
+      applyStagePresentation(columns, stages).map((column) => column.id),
+      ["b"]
+    );
+    assert.deepEqual(
+      columns.map((column) => column.id),
+      ["a", "b"]
+    );
+  } finally {
+    if (descriptor) Object.defineProperty(Array.prototype, "toSorted", descriptor);
+    else delete Array.prototype.toSorted;
+  }
+  /* eslint-enable no-extend-native */
+});
 test("supported custom stage move payloads preserve false/null and reject retired/archived targets", () => {
   const field = {
     id: "stage",

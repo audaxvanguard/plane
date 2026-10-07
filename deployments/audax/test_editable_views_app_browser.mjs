@@ -95,12 +95,16 @@ try {
     .locator("div.bg-layer-3.p-1")
     .filter({ has: page.locator("button") })
     .getByRole("button");
-  for (let index = 0; index < (await layouts.count()); index++) {
+  const layoutCount = await layouts.count();
+  // Layout transitions share one page and must be exercised sequentially.
+  /* eslint-disable no-await-in-loop */
+  for (let index = 0; index < layoutCount; index++) {
     if (await layouts.nth(index).isEnabled()) {
       await layouts.nth(index).click();
       await total(page);
     }
   }
+  /* eslint-enable no-await-in-loop */
   await layouts.nth(3).click();
   await page.getByText("Total BRL", { exact: true }).waitFor();
   assert.ok((await page.getByRole("row").count()) >= 3);

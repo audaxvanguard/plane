@@ -5,7 +5,7 @@ import { useTranslation } from "@plane/i18n";
 import { Button } from "@plane/propel/button";
 import { Input } from "@plane/propel/input";
 import type { TProjectCustomField, TProjectCustomViewConfigV2, TViewStagePresentation } from "@plane/types";
-import { validateViewAlias } from "@/helpers/project-view-config";
+import { applyStagePresentation, validateViewAlias } from "@/helpers/project-view-config";
 import { customGroupColumns } from "@/helpers/custom-fields";
 export function ViewStages({
   config,
@@ -33,11 +33,7 @@ export function ViewStages({
   };
   const field = fields.find((f) => f.id === stages?.field_id);
   const columns = stages?.source === "state" ? states : field ? customGroupColumns(field, (k) => t(key + k)) : [];
-  const ordered = columns.toSorted((a, b) => {
-    const ai = stages?.order.indexOf(a.id) ?? -1,
-      bi = stages?.order.indexOf(b.id) ?? -1;
-    return (ai < 0 ? columns.length : ai) - (bi < 0 ? columns.length : bi);
-  });
+  const ordered = applyStagePresentation(columns, stages ? { ...stages, hidden: [], aliases: {} } : null);
   const change = (patch: Partial<TViewStagePresentation>) => {
     if (stages)
       onChange(

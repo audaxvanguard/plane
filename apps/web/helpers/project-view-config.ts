@@ -112,7 +112,9 @@ export function applyStagePresentation<T extends { id: string; name: string }>(
   stages: TViewStagePresentation | null | undefined
 ): T[] {
   if (!stages) return columns;
-  const ordered = columns.toSorted((a, b) => {
+  // Copy before sorting: immutable presentation on the application's ES2022 baseline.
+  // eslint-disable-next-line unicorn/no-array-sort
+  const ordered = [...columns].sort((a, b) => {
     const ai = stages.order.indexOf(a.id),
       bi = stages.order.indexOf(b.id);
     return (ai < 0 ? stages.order.length : ai) - (bi < 0 ? stages.order.length : bi);
