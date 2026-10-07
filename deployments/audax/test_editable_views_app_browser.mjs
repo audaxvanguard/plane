@@ -57,6 +57,31 @@ try {
   await total(page);
   await page.getByRole("button", { name: /^(Stages|Etapas)$/ }).click();
   await page.getByRole("button", { name: "Etapa", exact: true }).click();
+  await page.getByRole("button", { name: /^(Stages|Etapas)$/ }).click();
+  const stageCleared = page.waitForResponse(
+    (response) =>
+      response.request().method() === "PATCH" &&
+      new URL(response.url()).pathname.endsWith(`/issues/${data.zero}/`) &&
+      response.request().postDataJSON()?.custom_values?.[data.stage] === null,
+    { timeout: 10000 }
+  );
+  await page.locator(`#issue-${data.zero}`).locator(":scope > a").dragTo(page.locator('[id^="unset__"]'));
+  assert.equal((await stageCleared).status(), 200);
+  await page.locator('[id^="unset__"]').locator(`#issue-${data.zero}`).waitFor();
+  const stageRestored = page.waitForResponse(
+    (response) =>
+      response.request().method() === "PATCH" &&
+      new URL(response.url()).pathname.endsWith(`/issues/${data.zero}/`) &&
+      response.request().postDataJSON()?.custom_values?.[data.stage] === data.option,
+    { timeout: 10000 }
+  );
+  await page
+    .locator(`#issue-${data.zero}`)
+    .locator(":scope > a")
+    .dragTo(page.locator(`[id^="${data.option}__"]`));
+  assert.equal((await stageRestored).status(), 200);
+  await total(page);
+  await page.getByRole("button", { name: /^(Stages|Etapas)$/ }).click();
   await page
     .getByRole("button", { name: /^(Hide stage|Ocultar etapa)$/ })
     .first()

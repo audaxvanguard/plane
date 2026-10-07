@@ -57,8 +57,9 @@ export function customGroupColumns(field: TProjectCustomField, label: (key: stri
     name,
     payload: { custom_values: { [field.id]: value } },
     ...(field.is_archived || field.options.some((option) => option.id === id && option.is_retired)
-      ? { disableIssueCreation: true }
+      ? { disableIssueCreation: true, isDropDisabled: true }
       : {}),
+    ...(field.is_archived ? { isDragDisabled: true } : {}),
   }));
 }
 

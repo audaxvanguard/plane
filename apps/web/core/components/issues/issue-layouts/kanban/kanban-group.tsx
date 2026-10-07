@@ -83,6 +83,7 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
     displayProperties,
     groupedIssueIds,
     isDropDisabled,
+    isDragDisabled,
     dropErrorMessage,
     updateIssue,
     quickActions,
@@ -99,6 +100,7 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
   const { t } = useTranslation();
   // hooks
   const projectState = useProjectState();
+  const isCustomStageGrouping = !!group_by?.startsWith("custom_field:") && !sub_group_by;
 
   const {
     issues: { getGroupIssueCount, getPaginationData, getIssueLoader },
@@ -162,11 +164,11 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
 
           if (!source || !destination) return;
 
-          if ((isWorkflowDropDisabled || isDropDisabled) && dropErrorMessage) {
+          if (isWorkflowDropDisabled || isDropDisabled) {
             setToast({
               type: TOAST_TYPE.WARNING,
               title: t("common.warning"),
-              message: dropErrorMessage,
+              message: dropErrorMessage ?? t("common.disabled"),
             });
             return;
           }
@@ -271,12 +273,14 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
   );
 
   const shouldLoadMore = nextPageResults === undefined ? issueIds?.length < groupIssueCount : !!nextPageResults;
-  const canOverlayBeVisible = isWorkflowDropDisabled || orderBy !== "sort_order" || isDropDisabled;
+  const canOverlayBeVisible =
+    isWorkflowDropDisabled || (!isCustomStageGrouping && orderBy !== "sort_order") || isDropDisabled;
   const shouldOverlayBeVisible = isDraggingOverColumn && canOverlayBeVisible;
   const canDragIssuesInCurrentGrouping =
+    !isDragDisabled &&
     !!group_by &&
-    DRAG_ALLOWED_GROUPS.includes(group_by) &&
-    (sub_group_by ? DRAG_ALLOWED_GROUPS.includes(sub_group_by) : true);
+    (isCustomStageGrouping ||
+      (DRAG_ALLOWED_GROUPS.includes(group_by) && (sub_group_by ? DRAG_ALLOWED_GROUPS.includes(sub_group_by) : true)));
 
   return (
     <div
