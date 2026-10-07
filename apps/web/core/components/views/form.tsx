@@ -92,18 +92,23 @@ export const ProjectViewForm = observer(function ProjectViewForm(props: Props) {
   const handleCreateUpdateView = async (formData: IProjectView) => {
     setSaveError(false);
     try {
-    await handleFormSubmit({
-      custom_view: projectQueryConfig({ display_filters: formData.display_filters, display_properties: formData.display_properties, rich_filters: formData.rich_filters, custom_view: formData.custom_view ?? {} }),
-      name: formData.name,
-      description: formData.description,
-      logo_props: formData.logo_props,
-      rich_filters: formData.rich_filters,
-      display_filters: formData.display_filters,
-      display_properties: formData.display_properties,
-      access: formData.access,
-    } as IProjectView);
+      await handleFormSubmit({
+        custom_view: projectQueryConfig({
+          display_filters: formData.display_filters,
+          display_properties: formData.display_properties,
+          rich_filters: formData.rich_filters,
+          custom_view: formData.custom_view ?? {},
+        }),
+        name: formData.name,
+        description: formData.description,
+        logo_props: formData.logo_props,
+        rich_filters: formData.rich_filters,
+        display_filters: formData.display_filters,
+        display_properties: formData.display_properties,
+        access: formData.access,
+      } as IProjectView);
 
-    reset({ ...defaultValues, ...configurationFromView(defaultValues) });
+      reset({ ...defaultValues, ...configurationFromView(defaultValues) });
     } catch {
       setSaveError(true);
     }
@@ -111,7 +116,11 @@ export const ProjectViewForm = observer(function ProjectViewForm(props: Props) {
 
   return (
     <form onSubmit={handleSubmit(handleCreateUpdateView)}>
-      {saveError && <p role="alert" className="px-5 pt-3 text-danger-primary">{t("project_settings.custom_fields.view_save_error")}</p>}
+      {saveError && (
+        <p role="alert" className="px-5 pt-3 text-danger-primary">
+          {t("project_settings.custom_fields.view_save_error")}
+        </p>
+      )}
       <div className="space-y-5 p-5">
         <h3 className="text-18 font-medium text-secondary">{data ? t("view.update.label") : t("view.create.label")}</h3>
         <div className="space-y-3">

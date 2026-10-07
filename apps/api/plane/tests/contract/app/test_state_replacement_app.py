@@ -61,3 +61,85 @@ def test_default_state_is_not_replaceable(crm_project,crm_admin_client):
     url=f'/api/workspaces/{crm_project.workspace.slug}/projects/{crm_project.id}/states/{source.id}/replacement-preview/'
     response=crm_admin_client.get(url)
     assert response.status_code==400
+
+
+def test_replacement_counts_all_references_and_retains_values_history(crm_project, crm_admin, field_factory):
+    from django.utils import timezone
+    from plane.db.models import DraftIssue, IssueActivity
+    from plane.app.services.project_stage_operations import preview_state_replacement, replace_and_delete_state
+    from plane.app.services.custom_fields import apply_custom_values, serialize_custom_values
+    source = State.objects.create(project=crm_project, name='Reference source', group='started')
+    target = State.objects.create(project=crm_project, name='Reference target', group='completed')
+    items = [Issue.objects.create(project=crm_project, name=str(n), state=source) for n in range(3)]
+    Issue.objects.filter(pk=items[1].pk).update(archived_at=timezone.now())
+    Issue.objects.filter(pk=items[2].pk).update(deleted_at=timezone.now())
+    draft = DraftIssue.objects.create(project=crm_project, name='Referenced draft', state=source)
+    field = field_factory(crm_project, 'currency')
+    apply_custom_values(items[0], {str(field.id): '0.10'}, actor=crm_admin)
+    assert preview_state_replacement(user=crm_admin, project=crm_project, state_id=source.id)['item_count'] == 4
+    replace_and_delete_state(user=crm_admin, project=crm_project, state_id=source.id, replacement_state_id=target.id, expected_item_count=4)
+    assert not Issue.all_objects.filter(state=source).exists()
+    assert not DraftIssue.all_objects.filter(state=source).exists()
+    assert Issue.all_objects.filter(id__in=[item.id for item in items], state=target, completed_at__isnull=False).count() == 3
+    draft.refresh_from_db(); assert draft.state_id == target.id
+    assert serialize_custom_values(items[0])[str(field.id)] == '0.10'
+    assert IssueActivity.objects.filter(issue_id__in=[item.id for item in items], field='state').count() == 3
+
+
+def test_replacement_failure_rolls_back_every_item_and_history(crm_project, crm_admin, monkeypatch):
+    from plane.db.models import IssueActivity
+    from plane.app.services import project_stage_operations as service
+    source = State.objects.create(project=crm_project, name='Rollback source', group='started')
+    target = State.objects.create(project=crm_project, name='Rollback target', group='completed')
+    items = [Issue.objects.create(project=crm_project, name=str(n), state=source) for n in range(2)]
+    original = service.track_state
+    calls = 0
+    def fail_second(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        if calls == 2: raise RuntimeError('injected failure')
+        return original(*args, **kwargs)
+    monkeypatch.setattr(service, 'track_state', fail_second)
+    with pytest.raises(RuntimeError):
+        service.replace_and_delete_state(user=crm_admin, project=crm_project, state_id=source.id, replacement_state_id=target.id, expected_item_count=2)
+    assert Issue.objects.filter(id__in=[item.id for item in items], state=source, completed_at__isnull=True).count() == 2
+    assert State.objects.filter(pk=source.id).exists()
+    assert not IssueActivity.objects.filter(issue_id__in=[item.id for item in items], field='state').exists()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_concurrent_bulk_assignment_cannot_land_on_retired_state(crm_project, crm_admin, monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Event
+    from django.db import close_old_connections, connections, IntegrityError
+    from plane.app.services import project_stage_operations as service
+    source = State.objects.create(project=crm_project, name='Concurrent source', group='started')
+    target = State.objects.create(project=crm_project, name='Concurrent target', group='started')
+    existing = Issue.objects.create(project=crm_project, name='Existing', state=source)
+    newcomer = Issue.objects.create(project=crm_project, name='New assignment', state=target)
+    removal_locked = Event(); assignment_started = Event()
+    original = service.track_state
+    def paused_track(*args, **kwargs):
+        removal_locked.set()
+        assert assignment_started.wait(10)
+        return original(*args, **kwargs)
+    monkeypatch.setattr(service, 'track_state', paused_track)
+    def remove():
+        close_old_connections()
+        try:
+            service.replace_and_delete_state(user=crm_admin, project=crm_project, state_id=source.id, replacement_state_id=target.id, expected_item_count=1)
+        finally: connections.close_all()
+    def assign():
+        close_old_connections()
+        try:
+            assert removal_locked.wait(10)
+            assignment_started.set()
+            with pytest.raises(IntegrityError):
+                Issue.objects.filter(pk=newcomer.pk).update(state_id=source.id)
+        finally: connections.close_all()
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        removal = pool.submit(remove); assignment = pool.submit(assign)
+        removal.result(timeout=20); assignment.result(timeout=20)
+    existing.refresh_from_db(); newcomer.refresh_from_db()
+    assert existing.state_id == target.id and newcomer.state_id == target.id
+    assert not Issue.all_objects.filter(state=source).exists()

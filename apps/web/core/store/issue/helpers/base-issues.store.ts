@@ -568,7 +568,9 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
     const issueBeforeUpdate = clone(this.rootIssueStore.issues.getIssueById(issueId));
     try {
       // Update the Respective Stores
-      const optimisticData=data.custom_values?{...data,custom_values:{...issueBeforeUpdate?.custom_values,...data.custom_values}}:data;
+      const optimisticData = data.custom_values
+        ? { ...data, custom_values: { ...issueBeforeUpdate?.custom_values, ...data.custom_values } }
+        : data;
       this.rootIssueStore.issues.updateIssue(issueId, optimisticData);
       this.updateIssueList({ ...issueBeforeUpdate, ...optimisticData } as TIssue, issueBeforeUpdate);
 
@@ -584,7 +586,7 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
       // call API to update the issue
       await this.issueService.patchIssue(workspaceSlug, projectId, issueId, data);
       this.rootIssueStore.rootStore.viewMetrics.invalidate(projectId);
-      if(data.custom_values) await this.rootIssueStore.issueDetail.issue.fetchIssue(workspaceSlug,projectId,issueId);
+      if (data.custom_values) await this.rootIssueStore.issueDetail.issue.fetchIssue(workspaceSlug, projectId, issueId);
 
       // call fetch Parent Stats
       this.fetchParentStats(workspaceSlug, projectId);
@@ -1659,7 +1661,8 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
   ): string[] => {
     // if issue object is undefined return empty array
     if (!issueObject) return [];
-    if (groupByKey?.startsWith("custom_field:")) return [customGroupValue(issueObject.custom_values, groupByKey.slice("custom_field:".length))];
+    if (groupByKey?.startsWith("custom_field:"))
+      return [customGroupValue(issueObject.custom_values, groupByKey.slice("custom_field:".length))];
     // if value is not defined, return None value in array
     if (!value || isEmpty(value)) return ["None"];
     // if array return the array

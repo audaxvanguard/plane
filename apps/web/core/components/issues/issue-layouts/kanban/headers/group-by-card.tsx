@@ -108,7 +108,7 @@ export const HeaderGroupByCard = observer(function HeaderGroupByCard(props: IHea
           handleOnSubmit={handleAddIssuesToView}
         />
       )}
-      {!isEpic && <PipelineStageTotals groupKey={column_id}/>}
+      {!isEpic && <PipelineStageTotals groupKey={column_id} />}
       <div
         className={`relative flex flex-shrink-0 gap-1 py-1.5 ${
           verticalAlignPosition ? `w-[44px] flex-col items-center` : `w-full flex-row items-center`

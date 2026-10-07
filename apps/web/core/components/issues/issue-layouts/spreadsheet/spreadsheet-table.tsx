@@ -66,16 +66,31 @@ export const SpreadsheetTable = observer(function SpreadsheetTable(props: Props)
   } = props;
 
   const params = useParams();
-  const slug = params.workspaceSlug?.toString(), projectId = params.projectId?.toString(), viewId = params.viewId?.toString();
+  const slug = params.workspaceSlug?.toString(),
+    projectId = params.projectId?.toString(),
+    viewId = params.viewId?.toString();
   const configuration = useViewConfiguration();
   const metadata = useProjectCustomFieldDefinitions(!isEpic ? slug : undefined, !isEpic ? projectId : undefined);
-  const working = slug && projectId && viewId ? configuration.get({ workspaceSlug: slug, projectId, viewId })?.working : undefined;
-  const aliases: Record<string, string> = { assignee: "assignees", due_date: "target_date", created_on: "created_at", updated_on: "updated_at" };
-  const resolvedColumns = projectId && !isEpic ? resolveViewColumns(working ? projectQueryConfig(working) : {}, metadata.fields, {
-    estimate: isEstimateEnabled, cycle: spreadsheetColumnsList.includes("cycle"), modules: spreadsheetColumnsList.includes("modules"),
-    legacyColumns: spreadsheetColumnsList.filter((p) => displayProperties[p]).map((p) => (aliases[p] ?? p) as TCustomBuiltinColumn),
-    legacyCustomFields: displayProperties.custom_fields,
-  }) : undefined;
+  const working =
+    slug && projectId && viewId ? configuration.get({ workspaceSlug: slug, projectId, viewId })?.working : undefined;
+  const aliases: Record<string, string> = {
+    assignee: "assignees",
+    due_date: "target_date",
+    created_on: "created_at",
+    updated_on: "updated_at",
+  };
+  const resolvedColumns =
+    projectId && !isEpic
+      ? resolveViewColumns(working ? projectQueryConfig(working) : {}, metadata.fields, {
+          estimate: isEstimateEnabled,
+          cycle: spreadsheetColumnsList.includes("cycle"),
+          modules: spreadsheetColumnsList.includes("modules"),
+          legacyColumns: spreadsheetColumnsList
+            .filter((p) => displayProperties[p])
+            .map((p) => (aliases[p] ?? p) as TCustomBuiltinColumn),
+          legacyCustomFields: displayProperties.custom_fields,
+        })
+      : undefined;
   // states
   const isScrolled = useRef(false);
   const [intersectionElement, setIntersectionElement] = useState<HTMLTableSectionElement | null>(null);
@@ -128,45 +143,47 @@ export const SpreadsheetTable = observer(function SpreadsheetTable(props: Props)
   const displayPropertiesCount = getDisplayPropertiesCount(displayProperties, ignoreFieldsForCounting);
 
   return (
-    <SpreadsheetColumnsContext.Provider value={resolvedColumns}><table className="w-full overflow-y-auto bg-surface-1" onKeyDown={handleKeyBoardNavigation}>
-      <SpreadsheetHeader
-        resolvedColumns={resolvedColumns}
-        displayProperties={displayProperties}
-        displayFilters={displayFilters}
-        handleDisplayFilterUpdate={handleDisplayFilterUpdate}
-        canEditProperties={canEditProperties}
-        isEstimateEnabled={isEstimateEnabled}
-        spreadsheetColumnsList={spreadsheetColumnsList}
-        selectionHelpers={selectionHelpers}
-        isEpic={isEpic}
-      />
-      <tbody>
-        {issueIds.map((id) => (
-          <SpreadsheetIssueRow
-            key={id}
-            issueId={id}
-            displayProperties={displayProperties}
-            quickActions={quickActions}
-            canEditProperties={canEditProperties}
-            nestingLevel={0}
-            isEstimateEnabled={isEstimateEnabled}
-            updateIssue={updateIssue}
-            portalElement={portalElement}
-            containerRef={containerRef}
-            isScrolled={isScrolled}
-            spreadsheetColumnsList={spreadsheetColumnsList}
-            selectionHelpers={selectionHelpers}
-            isEpic={isEpic}
-          />
-        ))}
-      </tbody>
-      {canLoadMoreIssues && (
-        <tfoot ref={setIntersectionElement}>
-          {Array.from({ length: 3 }).map((_, index) => (
-            <SpreadsheetIssueRowLoader key={index} columnCount={displayPropertiesCount} />
+    <SpreadsheetColumnsContext.Provider value={resolvedColumns}>
+      <table className="w-full overflow-y-auto bg-surface-1" onKeyDown={handleKeyBoardNavigation}>
+        <SpreadsheetHeader
+          resolvedColumns={resolvedColumns}
+          displayProperties={displayProperties}
+          displayFilters={displayFilters}
+          handleDisplayFilterUpdate={handleDisplayFilterUpdate}
+          canEditProperties={canEditProperties}
+          isEstimateEnabled={isEstimateEnabled}
+          spreadsheetColumnsList={spreadsheetColumnsList}
+          selectionHelpers={selectionHelpers}
+          isEpic={isEpic}
+        />
+        <tbody>
+          {issueIds.map((id) => (
+            <SpreadsheetIssueRow
+              key={id}
+              issueId={id}
+              displayProperties={displayProperties}
+              quickActions={quickActions}
+              canEditProperties={canEditProperties}
+              nestingLevel={0}
+              isEstimateEnabled={isEstimateEnabled}
+              updateIssue={updateIssue}
+              portalElement={portalElement}
+              containerRef={containerRef}
+              isScrolled={isScrolled}
+              spreadsheetColumnsList={spreadsheetColumnsList}
+              selectionHelpers={selectionHelpers}
+              isEpic={isEpic}
+            />
           ))}
-        </tfoot>
-      )}
-    </table></SpreadsheetColumnsContext.Provider>
+        </tbody>
+        {canLoadMoreIssues && (
+          <tfoot ref={setIntersectionElement}>
+            {Array.from({ length: 3 }).map((_, index) => (
+              <SpreadsheetIssueRowLoader key={index} columnCount={displayPropertiesCount} />
+            ))}
+          </tfoot>
+        )}
+      </table>
+    </SpreadsheetColumnsContext.Provider>
   );
 });

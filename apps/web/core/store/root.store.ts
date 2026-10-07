@@ -112,7 +112,9 @@ export class CoreRootStore {
 
   constructor() {
     this.viewMetrics = new ViewMetricsStore();
-    this.viewConfiguration = new ViewConfigurationStore(undefined, (view) => { this.projectView.viewMap[view.id] = view; });
+    this.viewConfiguration = new ViewConfigurationStore(undefined, (view) => {
+      this.projectView.viewMap[view.id] = view;
+    });
     this.customFields = new CustomFieldStore();
     this.router = new RouterStore();
     this.commandPalette = new CommandPaletteStore();
@@ -150,7 +152,9 @@ export class CoreRootStore {
     this.viewMetrics.reset();
     this.viewMetrics = new ViewMetricsStore();
     this.viewConfiguration.reset();
-    this.viewConfiguration = new ViewConfigurationStore(undefined, (view) => { this.projectView.viewMap[view.id] = view; });
+    this.viewConfiguration = new ViewConfigurationStore(undefined, (view) => {
+      this.projectView.viewMap[view.id] = view;
+    });
     this.customFields = new CustomFieldStore();
     // handling the system theme when user logged out from the app
     localStorage.setItem("theme", "system");

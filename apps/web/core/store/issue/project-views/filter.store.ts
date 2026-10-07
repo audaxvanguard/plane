@@ -111,9 +111,16 @@ export class ProjectViewIssuesFilter extends IssueFilterHelperStore implements I
 
     const context = this.configurationContext(viewId);
     const working = context ? this.rootIssueStore.rootStore.viewConfiguration.get(context)?.working : undefined;
-    const _filters: IIssueFilters = this.computedIssueFilters(working ? {
-      ...displayFilters, displayFilters: working.display_filters, displayProperties: working.display_properties, richFilters: working.rich_filters,
-    } : displayFilters);
+    const _filters: IIssueFilters = this.computedIssueFilters(
+      working
+        ? {
+            ...displayFilters,
+            displayFilters: working.display_filters,
+            displayProperties: working.display_properties,
+            richFilters: working.rich_filters,
+          }
+        : displayFilters
+    );
 
     return _filters;
   }
@@ -145,7 +152,12 @@ export class ProjectViewIssuesFilter extends IssueFilterHelperStore implements I
     return workspaceSlug && projectId ? { workspaceSlug, projectId, viewId } : undefined;
   }
 
-  private changeConfiguration(workspaceSlug: string, projectId: string, viewId: string, patch: Partial<ViewConfiguration>) {
+  private changeConfiguration(
+    workspaceSlug: string,
+    projectId: string,
+    viewId: string,
+    patch: Partial<ViewConfiguration>
+  ) {
     const context = { workspaceSlug, projectId, viewId };
     const store = this.rootIssueStore.rootStore.viewConfiguration;
     // This class is also reused by team views; only extend hydrated project views.
@@ -168,7 +180,11 @@ export class ProjectViewIssuesFilter extends IssueFilterHelperStore implements I
   );
 
   mutateFilters: IProjectViewIssuesFilter["mutateFilters"] = action((workspaceSlug, viewId, viewDetails) => {
-    if (viewDetails.project) this.rootIssueStore.rootStore.viewConfiguration.hydrate({ workspaceSlug, projectId: viewDetails.project, viewId }, viewDetails);
+    if (viewDetails.project)
+      this.rootIssueStore.rootStore.viewConfiguration.hydrate(
+        { workspaceSlug, projectId: viewDetails.project, viewId },
+        viewDetails
+      );
     const richFilters: TWorkItemFilterExpression = viewDetails?.rich_filters;
     const displayFilters: IIssueDisplayFilterOptions = this.computedDisplayFilters(viewDetails?.display_filters);
     const displayProperties: IIssueDisplayProperties = this.computedDisplayProperties(viewDetails?.display_properties);
@@ -318,7 +334,9 @@ export class ProjectViewIssuesFilter extends IssueFilterHelperStore implements I
             });
           });
 
-          this.changeConfiguration(workspaceSlug, projectId, viewId, { display_properties: _filters.displayProperties });
+          this.changeConfiguration(workspaceSlug, projectId, viewId, {
+            display_properties: _filters.displayProperties,
+          });
           break;
         }
         case EIssueFilterType.KANBAN_FILTERS: {

@@ -69,6 +69,7 @@
       "manage_properties": "Manage properties", "loading": "Loading properties…", "retry": "Retry", "close": "Close",
       "label": "Custom fields", "description": "Optional project fields for every work item. Currency values use BRL; field types cannot change after creation.",
       "unset": "Unset", "yes": "Yes", "no": "No", "retired": "retired", "unavailable_option": "Unavailable option",
+      "activity_changed": "changed", "activity_from": "from", "activity_to": "to", "activity_property": "custom property",
       "save": "Save", "saving": "Saving…", "save_error": "Could not save. Your input has been retained.", "invalid_value": "Check the value and decimal precision.",
       "archived_read_only": "Archived field — read only", "field_name": "Field name", "field_type": "Field type", "create": "Create field",
       "archive": "Archive", "restore": "Restore", "archived": "Archived", "field_description": "Description", "order": "Order", "save_definition": "Save changes",

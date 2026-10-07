@@ -16,6 +16,7 @@ export * from "./relation";
 export * from "./start_date";
 export * from "./target_date";
 export * from "./schedule-time";
+export * from "./custom-field";
 export * from "./cycle";
 export * from "./module";
 export * from "./label";

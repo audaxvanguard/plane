@@ -24,6 +24,7 @@ import {
   IssueStartDateActivity,
   IssueTargetDateActivity,
   IssueScheduleTimeActivity,
+  IssueCustomFieldActivity,
   IssueCycleActivity,
   IssueModuleActivity,
   IssueLabelActivity,
@@ -52,6 +53,7 @@ export const IssueActivityItem = observer(function IssueActivityItem(props: TIss
   const componentDefaultProps = { activityId, ends };
 
   const activityField = getActivityById(activityId)?.field;
+  if (activityField?.startsWith("custom_field:")) return <IssueCustomFieldActivity {...componentDefaultProps} />;
   switch (activityField) {
     case null: // default issue creation
       return <IssueDefaultActivity {...componentDefaultProps} />;

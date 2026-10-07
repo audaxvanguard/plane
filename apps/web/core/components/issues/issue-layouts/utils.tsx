@@ -106,8 +106,8 @@ export const isWorkspaceLevel = (type: EIssuesStoreType) =>
 
 import { customGroupColumns } from "@/helpers/custom-fields";
 
-import {applyStagePresentation} from "@/helpers/project-view-config";
-import type {TViewStagePresentation} from "@plane/types";
+import { applyStagePresentation } from "@/helpers/project-view-config";
+import type { TViewStagePresentation } from "@plane/types";
 type TGetGroupByColumns = {
   stages?: TViewStagePresentation | null;
   groupBy: GroupByColumnTypes | null;
@@ -151,7 +151,10 @@ export const getGroupByColumns = ({
     if (!currentProjectId) return undefined;
     const field = store.customFields.getFields(currentProjectId).find((field) => field.id === id);
     if (!field) return undefined;
-    return applyStagePresentation(customGroupColumns(field, (key) => translate?.("project_settings.custom_fields." + key) ?? key),stages);
+    return applyStagePresentation(
+      customGroupColumns(field, (key) => translate?.("project_settings.custom_fields." + key) ?? key),
+      stages
+    );
   }
 
   // Map of group by options to their corresponding column getter functions
@@ -172,8 +175,8 @@ export const getGroupByColumns = ({
   };
 
   // Get and return the columns for the specified group by option
-  const columns=groupByColumnMap[groupBy]?.({ isWorkspaceLevel, projectId });
-  return columns?applyStagePresentation(columns,stages):columns;
+  const columns = groupByColumnMap[groupBy]?.({ isWorkspaceLevel, projectId });
+  return columns ? applyStagePresentation(columns, stages) : columns;
 };
 
 const getProjectColumns = (): IGroupByColumn[] | undefined => {

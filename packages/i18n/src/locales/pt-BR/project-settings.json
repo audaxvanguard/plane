@@ -69,6 +69,7 @@
       "manage_properties": "Gerenciar propriedades", "loading": "Carregando propriedades…", "retry": "Tentar novamente", "close": "Fechar",
       "label": "Campos personalizados", "description": "Campos opcionais para todos os itens de trabalho do projeto. Valores monetários usam BRL; o tipo não pode ser alterado após a criação.",
       "unset": "Não definido", "yes": "Sim", "no": "Não", "retired": "desativada", "unavailable_option": "Opção indisponível",
+      "activity_changed": "alterou", "activity_from": "de", "activity_to": "para", "activity_property": "propriedade personalizada",
       "save": "Salvar", "saving": "Salvando…", "save_error": "Não foi possível salvar. O valor digitado foi mantido.", "invalid_value": "Confira o valor e a precisão decimal.",
       "archived_read_only": "Campo arquivado — somente leitura", "field_name": "Nome do campo", "field_type": "Tipo do campo", "create": "Criar campo",
       "archive": "Arquivar", "restore": "Restaurar", "archived": "Arquivado", "field_description": "Descrição", "order": "Ordem", "save_definition": "Salvar alterações",

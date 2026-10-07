@@ -21,7 +21,7 @@ import { MultipleSelectGroupAction } from "@/components/core/multiple-select";
 import { CreateUpdateIssueModal } from "@/components/issues/issue-modal/modal";
 import { CreateUpdateEpicModal } from "@/components/epic-modal";
 // constants
-import {PipelineStageTotals} from "../../metrics/stage-totals";
+import { PipelineStageTotals } from "../../metrics/stage-totals";
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 import type { TSelectionHelper } from "@/hooks/use-multiple-select";
 
@@ -118,7 +118,7 @@ export const HeaderGroupByCard = observer(function HeaderGroupByCard(props: IHea
         >
           <div className="line-clamp-1 inline-block truncate font-medium text-primary">{title}</div>
           <div className="pl-2 text-13 font-medium text-tertiary">{count || 0}</div>
-          {!isEpic&&<PipelineStageTotals groupKey={groupID}/>}
+          {!isEpic && <PipelineStageTotals groupKey={groupID} />}
           <div className="px-2.5"></div>
         </div>
 

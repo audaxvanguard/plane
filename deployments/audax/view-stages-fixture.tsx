@@ -1,4 +1,48 @@
-import React,{useState} from 'react';import {createRoot} from 'react-dom/client';import i18next from 'i18next';import {initReactI18next,I18nextProvider} from 'react-i18next';import pt from '../../packages/i18n/src/locales/pt-BR/project-settings.json';
-import {ViewStages} from '../../apps/web/core/components/views/configuration/stages';import {emptyViewConfig} from '../../apps/web/helpers/project-view-config';
-function Fixture(){const [config,setConfig]=useState(emptyViewConfig());return <ViewStages config={config} states={[{id:'active',name:'Started'},{id:'done',name:'Done'}]} fields={[{id:'stage',name:'Etapa',type:'select',is_archived:false,options:[{id:'a',label:'A',is_retired:false},{id:'b',label:'B',is_retired:false}]}] as any} onChange={(value,groupBy)=>{(window as any).configuration=value;(window as any).groupBy=groupBy;setConfig(value);}}/>;}
-void i18next.use(initReactI18next).init({lng:'pt-BR',resources:{'pt-BR':{translation:pt}}}).then(()=>createRoot(document.getElementById('root')!).render(<I18nextProvider i18n={i18next}><Fixture/></I18nextProvider>));
+import React, { useState } from "react";
+import { createRoot } from "react-dom/client";
+import i18next from "i18next";
+import { initReactI18next, I18nextProvider } from "react-i18next";
+import pt from "../../packages/i18n/src/locales/pt-BR/project-settings.json";
+import { ViewStages } from "../../apps/web/core/components/views/configuration/stages";
+import { emptyViewConfig } from "../../apps/web/helpers/project-view-config";
+function Fixture() {
+  const [config, setConfig] = useState(emptyViewConfig());
+  return (
+    <ViewStages
+      config={config}
+      states={[
+        { id: "active", name: "Started" },
+        { id: "done", name: "Done" },
+      ]}
+      fields={
+        [
+          {
+            id: "stage",
+            name: "Etapa",
+            type: "select",
+            is_archived: false,
+            options: [
+              { id: "a", label: "A", is_retired: false },
+              { id: "b", label: "B", is_retired: false },
+            ],
+          },
+        ] as any
+      }
+      onChange={(value, groupBy) => {
+        (window as any).configuration = value;
+        (window as any).groupBy = groupBy;
+        setConfig(value);
+      }}
+    />
+  );
+}
+void i18next
+  .use(initReactI18next)
+  .init({ lng: "pt-BR", resources: { "pt-BR": { translation: pt } } })
+  .then(() =>
+    createRoot(document.getElementById("root")!).render(
+      <I18nextProvider i18n={i18next}>
+        <Fixture />
+      </I18nextProvider>
+    )
+  );

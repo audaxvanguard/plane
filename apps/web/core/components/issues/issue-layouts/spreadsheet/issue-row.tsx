@@ -389,22 +389,66 @@ const IssueRowDetails = observer(function IssueRowDetails(props: IssueRowDetails
         </ControlLink>
       </td>
       {/* Rest of the columns */}
-      {resolvedColumns ? resolvedColumns.filter((column) => !["name", "identifier"].includes(column.reference)).map((column) => {
-        if (column.kind === "custom") return column.field ? <CustomFieldColumn key={column.key} field={column.field} value={issueDetail.custom_values?.[column.reference]} disabled={disableUserActions || column.readOnly || !updateIssue}
-          onSave={async (value) => { if (updateIssue && workspaceSlug && issueDetail.project_id) { await updateIssue(issueDetail.project_id, issueDetail.id, {custom_values:{[column.reference]:value}}); await authoritativeIssues.fetchIssue(workspaceSlug.toString(), issueDetail.project_id, issueDetail.id); } }} /> : <td key={column.key} className="text-placeholder">—</td>;
-        const property = (({assignees:"assignee",target_date:"due_date",created_at:"created_on",updated_at:"updated_on"} as Record<string,keyof IIssueDisplayProperties>)[column.reference] ?? column.reference) as keyof IIssueDisplayProperties;
-        return <IssueColumn key={column.key} property={property} displayProperties={{...displayProperties,[property]:true}} issueDetail={issueDetail} disableUserActions={disableUserActions} updateIssue={updateIssue} isEstimateEnabled={isEstimateEnabled}/>;
-      }) : spreadsheetColumnsList.map((property) => (
-        <IssueColumn
-          key={property}
-          displayProperties={displayProperties}
-          issueDetail={issueDetail}
-          disableUserActions={disableUserActions}
-          property={property}
-          updateIssue={updateIssue}
-          isEstimateEnabled={isEstimateEnabled}
-        />
-      ))}
+      {resolvedColumns
+        ? resolvedColumns
+            .filter((column) => !["name", "identifier"].includes(column.reference))
+            .map((column) => {
+              if (column.kind === "custom")
+                return column.field ? (
+                  <CustomFieldColumn
+                    key={column.key}
+                    field={column.field}
+                    value={issueDetail.custom_values?.[column.reference]}
+                    disabled={disableUserActions || column.readOnly || !updateIssue}
+                    onSave={async (value) => {
+                      if (updateIssue && workspaceSlug && issueDetail.project_id) {
+                        await updateIssue(issueDetail.project_id, issueDetail.id, {
+                          custom_values: { [column.reference]: value },
+                        });
+                        await authoritativeIssues.fetchIssue(
+                          workspaceSlug.toString(),
+                          issueDetail.project_id,
+                          issueDetail.id
+                        );
+                      }
+                    }}
+                  />
+                ) : (
+                  <td key={column.key} className="text-placeholder">
+                    —
+                  </td>
+                );
+              const property = ((
+                {
+                  assignees: "assignee",
+                  target_date: "due_date",
+                  created_at: "created_on",
+                  updated_at: "updated_on",
+                } as Record<string, keyof IIssueDisplayProperties>
+              )[column.reference] ?? column.reference) as keyof IIssueDisplayProperties;
+              return (
+                <IssueColumn
+                  key={column.key}
+                  property={property}
+                  displayProperties={{ ...displayProperties, [property]: true }}
+                  issueDetail={issueDetail}
+                  disableUserActions={disableUserActions}
+                  updateIssue={updateIssue}
+                  isEstimateEnabled={isEstimateEnabled}
+                />
+              );
+            })
+        : spreadsheetColumnsList.map((property) => (
+            <IssueColumn
+              key={property}
+              displayProperties={displayProperties}
+              issueDetail={issueDetail}
+              disableUserActions={disableUserActions}
+              property={property}
+              updateIssue={updateIssue}
+              isEstimateEnabled={isEstimateEnabled}
+            />
+          ))}
     </>
   );
 });

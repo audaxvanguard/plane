@@ -3,7 +3,9 @@
 from uuid import UUID
 from datetime import date
 from decimal import Decimal
+import json
 import re
+from django.utils import timezone
 from django.db import transaction
 from rest_framework.exceptions import ValidationError, PermissionDenied
 from plane.app.permissions import ROLE
@@ -15,6 +17,7 @@ from plane.db.models import (
     DraftIssue,
     ProjectCustomField,
     IssueCustomFieldValue,
+    IssueActivity,
 )
 
 
@@ -190,7 +193,7 @@ def validate_historical_scalar(field, raw, baseline):
     return validate_scalar(field, raw)
 
 
-def persist_values(issue, fields, normalized, existing):
+def persist_values(issue, fields, normalized, existing, *, actor):
     changes = []
     columns = {
         "text": "text_value",
@@ -217,6 +220,24 @@ def persist_values(issue, fields, normalized, existing):
                 issue=issue, field=field, defaults=defaults
             )
         changes.append(change_snapshot(field, before, scalar))
+    # Durable history shares the value transaction: neither can survive alone.
+    # Snapshots retain labels/types/options independently of future schema edits.
+    epoch = timezone.now().timestamp()
+    IssueActivity.objects.bulk_create([
+        IssueActivity(
+            issue=issue,
+            project_id=issue.project_id,
+            workspace_id=issue.workspace_id,
+            actor=actor,
+            verb="updated",
+            field=change["field"],
+            old_value=json.dumps(change["old_value"], ensure_ascii=False),
+            new_value=json.dumps(change["new_value"], ensure_ascii=False),
+            comment="updated custom property",
+            epoch=epoch,
+        )
+        for change in changes
+    ])
     getattr(issue, "_prefetched_objects_cache", {}).pop("custom_field_values", None)
     return changes
 
@@ -237,7 +258,7 @@ def apply_custom_values(issue, patch, *, actor):
         )
         for key, raw in patch.items()
     }
-    return persist_values(issue, fields, normalized, existing)
+    return persist_values(issue, fields, normalized, existing, actor=actor)
 
 
 def validate_draft_values(project, patch, existing):
@@ -274,7 +295,7 @@ def clear_project_values(issue, *, actor, confirmed):
     Issue.objects.select_for_update().get(id=issue.id)
     existing = {str(row.field_id): row for row in value_rows(issue)}
     fields = resolve_fields(project.id, list(existing), for_write=False)
-    return persist_values(issue, fields, {key: None for key in existing}, existing)
+    return persist_values(issue, fields, {key: None for key in existing}, existing, actor=actor)
 
 
 @transaction.atomic
@@ -292,5 +313,5 @@ def promote_draft_values(draft, issue, *, actor):
     normalized = validate_draft_values(project, {}, authoritative.custom_values)
     fields = resolve_fields(project.id, list(normalized), for_write=False)
     existing = {str(row.field_id): row for row in value_rows(issue)}
-    changes = persist_values(issue, fields, normalized, existing)
+    changes = persist_values(issue, fields, normalized, existing, actor=actor)
     issue._custom_field_changes = changes

@@ -205,7 +205,11 @@ export class ProjectViewStore implements IProjectViewStore {
    * @returns Promise<IProjectView>
    */
   async createView(workspaceSlug: string, projectId: string, data: Partial<IProjectView>): Promise<IProjectView> {
-    const response = await this.viewService.createView(workspaceSlug, projectId, getValidatedViewFilters(copyConfiguration(data)));
+    const response = await this.viewService.createView(
+      workspaceSlug,
+      projectId,
+      getValidatedViewFilters(copyConfiguration(data))
+    );
 
     runInAction(() => {
       set(this.viewMap, [response.id], response);
@@ -229,7 +233,9 @@ export class ProjectViewStore implements IProjectViewStore {
     data: Partial<IProjectView>
   ): Promise<IProjectView> {
     const response = await this.viewService.patchView(workspaceSlug, projectId, viewId, data);
-    runInAction(() => { set(this.viewMap, [viewId], response); });
+    runInAction(() => {
+      set(this.viewMap, [viewId], response);
+    });
     return response;
   }
 

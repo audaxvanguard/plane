@@ -32,7 +32,7 @@ import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 import { useWorkFlowFDragNDrop } from "@/components/workflow";
 import type { TRenderQuickActions } from "../list/list-view-types";
 import type { GroupDropLocation } from "../utils";
-import {useViewStages} from "@/hooks/use-view-stages";
+import { useViewStages } from "@/hooks/use-view-stages";
 import { getGroupByColumns, isWorkspaceLevel, getApproximateCardHeight } from "../utils";
 // components
 import { HeaderGroupByCard } from "./headers/group-by-card";
@@ -109,7 +109,7 @@ export const KanBan = observer(function KanBan(props: IKanBan) {
 
   const { getIsWorkflowWorkItemCreationDisabled } = useWorkFlowFDragNDrop(group_by, sub_group_by);
 
-  const stages=useViewStages(group_by);
+  const stages = useViewStages(group_by);
   const list = getGroupByColumns({
     stages,
     groupBy: group_by as GroupByColumnTypes,
@@ -182,7 +182,8 @@ export const KanBan = observer(function KanBan(props: IKanBan) {
                     count={getGroupIssueCount(subList.id, undefined, false) ?? 0}
                     issuePayload={subList.payload}
                     disableIssueCreation={
-                      disableIssueCreation || subList.disableIssueCreation ||
+                      disableIssueCreation ||
+                      subList.disableIssueCreation ||
                       isGroupByCreatedBy ||
                       getIsWorkflowWorkItemCreationDisabled(subList.id, sub_group_id)
                     }

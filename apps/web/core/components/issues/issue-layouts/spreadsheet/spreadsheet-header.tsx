@@ -73,28 +73,69 @@ export const SpreadsheetHeader = observer(function SpreadsheetHeader(props: Prop
                   />
                 </div>
               )}
-              <span className="text-13 font-medium">{resolvedColumns && resolvedColumns[0]?.title !== "name" ? resolvedColumns?.[0]?.title : `${isEpic ? "Epics" : "Work items"}`} </span>
+              <span className="text-13 font-medium">
+                {resolvedColumns && resolvedColumns[0]?.title !== "name"
+                  ? resolvedColumns?.[0]?.title
+                  : `${isEpic ? "Epics" : "Work items"}`}{" "}
+              </span>
             </div>
           </div>
         </th>
 
-        {resolvedColumns ? resolvedColumns.filter((c) => c.reference !== "name" && c.reference !== "identifier").map((column) => (
-          column.kind === "custom" ? <th key={column.key} className="h-11 min-w-36 border-r border-subtle bg-layer-1 px-3 text-left text-13">{column.title}</th> :
-          <SpreadsheetHeaderColumn key={column.key} title={column.title === column.reference ? undefined : column.title}
-            property={({assignees:"assignee",target_date:"due_date",created_at:"created_on",updated_at:"updated_on"} as Record<string,keyof IIssueDisplayProperties>)[column.reference] ?? column.reference as keyof IIssueDisplayProperties}
-            displayProperties={{...displayProperties, [({assignees:"assignee",target_date:"due_date",created_at:"created_on",updated_at:"updated_on"} as Record<string,string>)[column.reference] ?? column.reference]:true}}
-            displayFilters={displayFilters} handleDisplayFilterUpdate={handleDisplayFilterUpdate} isEstimateEnabled={isEstimateEnabled} isEpic={isEpic} />
-        )) : spreadsheetColumnsList.map((property) => (
-          <SpreadsheetHeaderColumn
-            key={property}
-            property={property}
-            displayProperties={displayProperties}
-            displayFilters={displayFilters}
-            handleDisplayFilterUpdate={handleDisplayFilterUpdate}
-            isEstimateEnabled={isEstimateEnabled}
-            isEpic={isEpic}
-          />
-        ))}
+        {resolvedColumns
+          ? resolvedColumns
+              .filter((c) => c.reference !== "name" && c.reference !== "identifier")
+              .map((column) =>
+                column.kind === "custom" ? (
+                  <th
+                    key={column.key}
+                    className="h-11 min-w-36 border-r border-subtle bg-layer-1 px-3 text-left text-13"
+                  >
+                    {column.title}
+                  </th>
+                ) : (
+                  <SpreadsheetHeaderColumn
+                    key={column.key}
+                    title={column.title === column.reference ? undefined : column.title}
+                    property={
+                      (
+                        {
+                          assignees: "assignee",
+                          target_date: "due_date",
+                          created_at: "created_on",
+                          updated_at: "updated_on",
+                        } as Record<string, keyof IIssueDisplayProperties>
+                      )[column.reference] ?? (column.reference as keyof IIssueDisplayProperties)
+                    }
+                    displayProperties={{
+                      ...displayProperties,
+                      [(
+                        {
+                          assignees: "assignee",
+                          target_date: "due_date",
+                          created_at: "created_on",
+                          updated_at: "updated_on",
+                        } as Record<string, string>
+                      )[column.reference] ?? column.reference]: true,
+                    }}
+                    displayFilters={displayFilters}
+                    handleDisplayFilterUpdate={handleDisplayFilterUpdate}
+                    isEstimateEnabled={isEstimateEnabled}
+                    isEpic={isEpic}
+                  />
+                )
+              )
+          : spreadsheetColumnsList.map((property) => (
+              <SpreadsheetHeaderColumn
+                key={property}
+                property={property}
+                displayProperties={displayProperties}
+                displayFilters={displayFilters}
+                handleDisplayFilterUpdate={handleDisplayFilterUpdate}
+                isEstimateEnabled={isEstimateEnabled}
+                isEpic={isEpic}
+              />
+            ))}
       </tr>
     </thead>
   );

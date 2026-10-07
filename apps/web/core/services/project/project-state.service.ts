@@ -12,11 +12,26 @@ import { APIService } from "@/services/api.service";
 // types
 
 export class ProjectStateService extends APIService {
-  async previewReplacement(workspaceSlug:string,projectId:string,stateId:string):Promise<{item_count:number;referenced_view_ids:string[]}>{
-    const response=await this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/states/${stateId}/replacement-preview/`);return response.data;
+  async previewReplacement(
+    workspaceSlug: string,
+    projectId: string,
+    stateId: string
+  ): Promise<{ item_count: number; referenced_view_ids: string[] }> {
+    const response = await this.get(
+      `/api/workspaces/${workspaceSlug}/projects/${projectId}/states/${stateId}/replacement-preview/`
+    );
+    return response.data;
   }
-  async replaceAndDelete(workspaceSlug:string,projectId:string,stateId:string,data:{replacement_state_id:string;expected_item_count:number;confirmed:true}):Promise<void>{
-    await this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/states/${stateId}/replace-and-delete/`,data);
+  async replaceAndDelete(
+    workspaceSlug: string,
+    projectId: string,
+    stateId: string,
+    data: { replacement_state_id: string; expected_item_count: number; confirmed: true }
+  ): Promise<void> {
+    await this.post(
+      `/api/workspaces/${workspaceSlug}/projects/${projectId}/states/${stateId}/replace-and-delete/`,
+      data
+    );
   }
   constructor() {
     super(API_BASE_URL);

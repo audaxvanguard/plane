@@ -13,29 +13,52 @@ export function nativeCustomView(groupBy?: string | null, orderBy?: string): TPr
   const group = groupBy?.startsWith(CUSTOM_FIELD_PREFIX) ? groupBy.slice(CUSTOM_FIELD_PREFIX.length) : null;
   const match = orderBy?.match(/^custom_field:(.+):(asc|desc)$/);
   if (!group && !match) return undefined;
-  return { version: 1, columns: [], conditions: [], metrics: [], group_by: group ? { field_id: group } : null,
-    sort: match ? { field_id: match[1], direction: match[2] as "asc" | "desc" } : null };
+  return {
+    version: 1,
+    columns: [],
+    conditions: [],
+    metrics: [],
+    group_by: group ? { field_id: group } : null,
+    sort: match ? { field_id: match[1], direction: match[2] as "asc" | "desc" } : null,
+  };
 }
 
 /** Native one-group pagination expects an ungrouped result page. */
 export function customGroupPage(config: TProjectCustomViewConfig, groupId: string): TProjectCustomViewConfig {
   if (!config.group_by) return config;
   const field_id = config.group_by.field_id;
-  const condition = groupId === "unset" ? { field_id, operator: "is_unset" as const }
-    : { field_id, operator: "eq" as const, value: groupId === "true" ? true : groupId === "false" ? false : groupId };
-  return { ...config, ...(config.version === 2 ? { stages: null } : {}), group_by: null, conditions: [...config.conditions, condition] };
+  const condition =
+    groupId === "unset"
+      ? { field_id, operator: "is_unset" as const }
+      : { field_id, operator: "eq" as const, value: groupId === "true" ? true : groupId === "false" ? false : groupId };
+  return {
+    ...config,
+    ...(config.version === 2 ? { stages: null } : {}),
+    group_by: null,
+    conditions: [...config.conditions, condition],
+  };
 }
 
 /** Reuse native column/payload contracts without confusing false with unset. */
 export function customGroupColumns(field: TProjectCustomField, label: (key: string) => string) {
-  const values = field.type === "checkbox" ? [
-    { id: "true", name: label("yes"), value: true },
-    { id: "false", name: label("no"), value: false },
-  ] : field.type === "select" ? field.options.map((option) => ({ id: option.id, name: option.label, value: option.id })) : [];
+  const values =
+    field.type === "checkbox"
+      ? [
+          { id: "true", name: label("yes"), value: true },
+          { id: "false", name: label("no"), value: false },
+        ]
+      : field.type === "select"
+        ? field.options.map((option) => ({ id: option.id, name: option.label, value: option.id }))
+        : [];
   if (!["checkbox", "select"].includes(field.type)) return [];
+  // oxlint-disable-next-line no-map-spread -- Immutable stage projections must not mutate shared definitions.
   return [...values, { id: "unset", name: label("unset"), value: null }].map(({ id, name, value }) => ({
-    id, name, payload: { custom_values: { [field.id]: value } },
-    ...(field.is_archived || field.options.some((option) => option.id === id && option.is_retired) ? { disableIssueCreation: true } : {}),
+    id,
+    name,
+    payload: { custom_values: { [field.id]: value } },
+    ...(field.is_archived || field.options.some((option) => option.id === id && option.is_retired)
+      ? { disableIssueCreation: true }
+      : {}),
   }));
 }
 
@@ -52,7 +75,9 @@ export function hasCustomValues(values: Record<string, CustomValue> = {}): boole
 export function formatBRL(value: string): string {
   const match = /^(-?)(\d+)(?:\.(\d{1,2}))?$/.exec(value);
   if (!match) throw new Error("Invalid BRL amount.");
-  const whole = BigInt(match[2]).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  const whole = BigInt(match[2])
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   return `${match[1]}R$\u00a0${whole},${(match[3] ?? "").padEnd(2, "0")}`;
 }
 
@@ -86,10 +111,54 @@ export function normalizeCustomInput(field: TProjectCustomField, raw: string | b
   if (field.type === "date") {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) throw new Error("Enter a date as YYYY-MM-DD.");
     const date = new Date(`${raw}T00:00:00Z`);
-    if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== raw) throw new Error("Enter a valid calendar date.");
+    if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== raw)
+      throw new Error("Enter a valid calendar date.");
     return raw;
   }
-  const option = field.options.find((option) => option.id === raw);
+  const option = field.options.find((candidate) => candidate.id === raw);
   if (!option || option.is_retired) throw new Error("Choose an available option.");
   return option.id;
+}
+
+export type TCustomFieldSnapshot = {
+  label: string;
+  type: TProjectCustomField["type"];
+  value: CustomValue;
+  option_label?: string | null;
+};
+
+/** History never resolves mutable definitions; its labels/types are captured. */
+export function parseCustomFieldSnapshot(raw?: string | null): TCustomFieldSnapshot | null {
+  try {
+    const data: unknown = JSON.parse(raw ?? "null");
+    if (!data || typeof data !== "object" || Array.isArray(data)) return null;
+    const value = data as Record<string, unknown>;
+    if (
+      typeof value.label !== "string" ||
+      !["text", "number", "currency", "date", "checkbox", "select"].includes(String(value.type)) ||
+      !(value.value === null || typeof value.value === "string" || typeof value.value === "boolean") ||
+      !(value.option_label == null || typeof value.option_label === "string")
+    )
+      return null;
+    return value as TCustomFieldSnapshot;
+  } catch {
+    return null;
+  }
+}
+
+export function formatCustomFieldSnapshot(raw: string | null | undefined, label: (key: string) => string): string {
+  const snapshot = parseCustomFieldSnapshot(raw);
+  if (!snapshot || snapshot.value == null) return label("unset");
+  if (snapshot.type === "checkbox")
+    return typeof snapshot.value === "boolean" ? label(snapshot.value ? "yes" : "no") : label("unset");
+  if (typeof snapshot.value !== "string") return label("unset");
+  if (snapshot.type === "select") return snapshot.option_label ?? label("unavailable_option");
+  if (snapshot.type === "currency") {
+    try {
+      return formatBRL(snapshot.value);
+    } catch {
+      return label("unset");
+    }
+  }
+  return snapshot.value;
 }
