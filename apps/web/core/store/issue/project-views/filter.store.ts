@@ -263,10 +263,18 @@ export class ProjectViewIssuesFilter extends IssueFilterHelperStore implements I
     try {
       if (isEmpty(this.filters) || isEmpty(this.filters[viewId])) return;
 
+      // Toolbar edits live in the working configuration. The native mirror may
+      // still contain the previous saved stage source/properties after a save.
+      const working = this.rootIssueStore.rootStore.viewConfiguration.get({
+        workspaceSlug,
+        projectId,
+        viewId,
+      })?.working;
       const _filters = {
-        richFilters: this.filters[viewId].richFilters,
-        displayFilters: this.filters[viewId].displayFilters as IIssueDisplayFilterOptions,
-        displayProperties: this.filters[viewId].displayProperties as IIssueDisplayProperties,
+        richFilters: working ? working.rich_filters : this.filters[viewId].richFilters,
+        displayFilters: (working?.display_filters ?? this.filters[viewId].displayFilters) as IIssueDisplayFilterOptions,
+        displayProperties: (working?.display_properties ??
+          this.filters[viewId].displayProperties) as IIssueDisplayProperties,
         kanbanFilters: this.filters[viewId].kanbanFilters as TIssueKanbanFilters,
       };
 

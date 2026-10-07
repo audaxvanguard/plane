@@ -58,6 +58,11 @@ try {
   await page.getByRole("button", { name: /^(Stages|Etapas)$/ }).click();
   await page.getByRole("button", { name: "Etapa", exact: true }).click();
   await page.getByRole("button", { name: /^(Stages|Etapas)$/ }).click();
+  await page
+    .locator(`#issue-${data.zero}`)
+    .locator(':scope > a[draggable="true"][class*="hover:cursor-pointer"]')
+    .waitFor();
+  await page.locator('[id^="unset__"]').waitFor();
   const stageCleared = page.waitForResponse(
     (response) =>
       response.request().method() === "PATCH" &&
@@ -66,8 +71,18 @@ try {
     { timeout: 10000 }
   );
   await page.locator(`#issue-${data.zero}`).locator(":scope > a").dragTo(page.locator('[id^="unset__"]'));
-  assert.equal((await stageCleared).status(), 200);
+  assert.equal((await stageCleared).status(), 204);
   await page.locator('[id^="unset__"]').locator(`#issue-${data.zero}`).waitFor();
+  await page.waitForFunction(
+    (option) =>
+      document.querySelector(`[data-testid="pipeline-stage-count-${option}-all"]`)?.textContent.endsWith(": 1") &&
+      document.querySelector('[data-testid="pipeline-stage-count-unset-all"]')?.textContent.endsWith(": 2"),
+    data.option
+  );
+  await page
+    .locator(`#issue-${data.zero}`)
+    .locator(':scope > a[draggable="true"][class*="hover:cursor-pointer"]')
+    .waitFor();
   const stageRestored = page.waitForResponse(
     (response) =>
       response.request().method() === "PATCH" &&
@@ -79,7 +94,7 @@ try {
     .locator(`#issue-${data.zero}`)
     .locator(":scope > a")
     .dragTo(page.locator(`[id^="${data.option}__"]`));
-  assert.equal((await stageRestored).status(), 200);
+  assert.equal((await stageRestored).status(), 204);
   await total(page);
   await page.getByRole("button", { name: /^(Stages|Etapas)$/ }).click();
   await page
@@ -264,6 +279,32 @@ try {
   );
   const nativeSaved = await saved(first);
   assert.equal(nativeSaved.custom_view.stages.source, "state");
+  await page.getByRole("button", { name: /^(Stages|Etapas)$/ }).click();
+  await page
+    .locator("div.bg-layer-3.p-1")
+    .filter({ has: page.locator("button") })
+    .getByRole("button")
+    .nth(1)
+    .click();
+  await page
+    .locator(`#issue-${data.zero}`)
+    .locator(':scope > a[draggable="true"][class*="hover:cursor-pointer"]')
+    .waitFor();
+  await page.locator(`[id^="${data.target}__"]`).waitFor();
+  const nativeMove = page.waitForResponse(
+    (response) =>
+      response.request().method() === "PATCH" && new URL(response.url()).pathname.endsWith(`/issues/${data.zero}/`),
+    { timeout: 10000 }
+  );
+  await page
+    .locator(`#issue-${data.zero}`)
+    .locator(":scope > a")
+    .dragTo(page.locator(`[id^="${data.target}__"]`));
+  assert.equal((await nativeMove).status(), 204);
+  const nativeMoved = await first.request.get(`${project}/issues/${data.zero}/`);
+  assert.equal((await nativeMoved.json()).state_id, data.target);
+  await page.locator(`[id^="${data.target}__"]`).locator(`#issue-${data.zero}`).waitFor();
+  await total(page, "11");
   const copyResponse = page.waitForResponse(
     (response) => response.request().method() === "POST" && response.url() === `${project}/views/`
   );
