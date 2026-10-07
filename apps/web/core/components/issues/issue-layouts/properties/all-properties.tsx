@@ -46,6 +46,7 @@ import { usePlatformOS } from "@/hooks/use-platform-os";
 import { IssuePropertyLabels } from "./labels";
 import { WithDisplayPropertiesHOC } from "./with-display-properties-HOC";
 import { useCustomFields } from "@/hooks/use-custom-fields";
+import { useViewConfiguration } from "@/hooks/use-view-configuration";
 import { CustomFieldChips } from "@/components/issues/custom-fields/editor";
 
 export interface IIssueProperties {
@@ -80,7 +81,12 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
 
   // router
   const router = useAppRouter();
-  const { workspaceSlug, projectId } = useParams();
+  const { workspaceSlug, projectId,viewId } = useParams();
+  const configurations=useViewConfiguration();
+  const columns=workspaceSlug&&projectId&&viewId&&projectId.toString()===issue.project_id?configurations.get({workspaceSlug:workspaceSlug.toString(),projectId:projectId.toString(),viewId:viewId.toString()})?.working.custom_view.columns:undefined;
+  const customColumns=columns?.length?columns.filter(c=>c.kind==="custom"):null;
+  const customSelection=customColumns?.map(c=>c.field_id)??displayProperties?.custom_fields;
+  const customAliases=Object.fromEntries(customColumns?.filter(c=>c.alias).map(c=>[c.field_id,c.alias!])??[]);
 
   // derived values
   const stateDetails = getStateById(issue.state_id);
@@ -199,7 +205,7 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
 
   return (
     <div className={className}>
-      <CustomFieldChips fields={customFields.getFields(issue.project_id)} selected={displayProperties.custom_fields} values={issue.custom_values} />
+      <CustomFieldChips fields={customFields.getFields(issue.project_id)} selected={customSelection} values={issue.custom_values} aliases={customAliases} />
       {/* basic properties */}
       {/* state */}
       <WithDisplayPropertiesHOC displayProperties={displayProperties} displayPropertyKey="state">

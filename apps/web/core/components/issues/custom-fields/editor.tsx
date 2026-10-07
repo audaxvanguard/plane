@@ -30,15 +30,15 @@ export function CustomFieldDisplay({ field, value }: { field: TProjectCustomFiel
 }
 
 /** Native card/list property chips, in the user's saved display order. */
-export function CustomFieldChips({ fields, selected = [], values = {} }: {
-  fields: TProjectCustomField[]; selected?: string[]; values?: Record<string, CustomValue>;
+export function CustomFieldChips({ fields, selected = [], values = {}, aliases = {} }: {
+  fields: TProjectCustomField[]; selected?: string[]; values?: Record<string, CustomValue>; aliases?:Record<string,string>;
 }) {
   return <>{selected.map((id) => {
     const field = fields.find((field) => field.id === id);
     if (!field) return null;
-    return <span key={id} data-testid={`custom-property-${id}`} title={field.description || field.name}
+    return <span key={id} data-testid={`custom-property-${id}`} title={aliases[id] ?? (field.description || field.name)}
       className="inline-flex h-5 max-w-56 shrink-0 items-center gap-1 overflow-hidden rounded-sm border-[0.5px] border-strong px-2 text-caption-sm-regular text-secondary">
-      <span className="truncate text-tertiary">{field.name}:</span> <span className="truncate"><CustomFieldDisplay field={field} value={values[id]} /></span>
+      <span className="truncate text-tertiary">{aliases[id] ?? field.name}:</span> <span className="truncate"><CustomFieldDisplay field={field} value={values[id]} /></span>
     </span>;
   })}</>;
 }

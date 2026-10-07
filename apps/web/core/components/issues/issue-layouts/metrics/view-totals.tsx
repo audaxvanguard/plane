@@ -6,21 +6,28 @@ import {useTranslation} from "@plane/i18n";
 import {Button} from "@plane/propel/button";
 import {useViewMetrics} from "@/hooks/use-view-metrics";
 import {useViewConfiguration} from "@/hooks/use-view-configuration";
+import {useProjectState} from "@/hooks/store/use-project-state";
 import {useCustomFields} from "@/hooks/use-custom-fields";
-import {projectQueryConfig} from "@/helpers/project-view-config";
+import {projectMetricsConfiguration} from "@/helpers/project-view-config";
 import type {ViewContext} from "@/helpers/project-view-config";
 import {PipelineTotals} from "./totals";
 export const ViewPipelineTotals=observer(function ViewPipelineTotals({context}:{context:ViewContext}){
   const store=useViewMetrics(),configuration=useViewConfiguration().get(context),metadata=useCustomFields();
   const {t}=useTranslation(),key="project_settings.custom_fields.";
-  const effective=configuration?{custom_view:projectQueryConfig(configuration.working),rich_filters:configuration.working.rich_filters??{},display_filters:{...configuration.working.display_filters,sub_issue:configuration.working.display_filters.sub_issue??true}}:null;
+  const effective=configuration?projectMetricsConfiguration(configuration.working):null;
+  const nativeStates=useProjectState();
+  const definitions=JSON.stringify([metadata.getFields(context.projectId),nativeStates.getProjectStates(context.projectId)]);
   const signature=JSON.stringify(effective),invalidation=store.invalidations[context.projectId]??0;
   const enabled=!!effective&&(!!effective.custom_view.metrics?.length||(effective.custom_view.version===2&&!!effective.custom_view.count_scopes.length));
   const fetch=()=>{if(effective)void store.fetch(context,effective).catch(()=>{});};
-  useEffect(()=>{if(enabled)fetch();},[signature,invalidation,context.workspaceSlug,context.projectId,context.viewId,enabled]);
+  useEffect(()=>{if(enabled)fetch();},[signature,definitions,invalidation,context.workspaceSlug,context.projectId,context.viewId,enabled]);
   if(!enabled)return null;
   const entry=store.get(context);
+  const config=configuration?.working.custom_view;
+  const hidden=config?.version===2?config.stages?.hidden??[]:[];
+  const hiddenItems=entry?.data?.counts?.groups.filter(g=>hidden.includes(g.key)).reduce((sum,g)=>sum+(g.scopes.filtered?.item_count??0),0)??0;
   return <div className="border-b border-subtle px-4 py-2">
-    {!entry||entry.signature!==signature||entry.loading?<p role="status">{t(key+"loading_totals")}</p>:entry.error?<div role="alert">{t(key+"totals_error")} <Button variant="secondary" size="sm" onClick={fetch}>{t(key+"retry")}</Button></div>:entry.data&&<PipelineTotals response={entry.data} fields={metadata.getFields(context.projectId)}/>}
+    {!entry||entry.signature!==signature||entry.loading?<p role="status">{t(key+"loading_totals")}</p>:entry.error?<div role="alert">{t(key+"totals_error")} <Button variant="secondary" size="sm" onClick={fetch}>{t(key+"retry")}</Button></div>:entry.data&&<PipelineTotals response={entry.data} fields={metadata.getFields(context.projectId)} countScopes={config?.version===2?config.count_scopes:undefined}/> }
+    {!!hidden.length&&entry?.data&&!entry.loading&&entry.signature===signature&&<p role="status" data-testid="pipeline-hidden-items">{t(key+"hidden_items")}: {hiddenItems}</p>}
   </div>;
 });

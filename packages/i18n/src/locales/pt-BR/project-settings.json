@@ -1,6 +1,7 @@
 {
   "project_settings": {
     "custom_fields": {
+      "hidden_items": "Itens elegíveis em etapas ocultas",
       "shared_stages_notice": "As definições compartilhadas afetam todas as visualizações do projeto. A aposentadoria de opções preserva os valores existentes.",
       "manage_native_stages": "Gerenciar estados compartilhados",
       "manage_custom_stages": "Gerenciar opções compartilhadas",

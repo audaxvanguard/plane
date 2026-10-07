@@ -5,6 +5,11 @@ export type ViewContext = { workspaceSlug: string; projectId: string; viewId: st
 export type ViewConfiguration = Pick<IProjectView, "display_filters" | "display_properties" | "rich_filters"> & { custom_view: TProjectCustomViewConfig | Record<string, never> };
 export function copyConfiguration<T>(value: T): T { return JSON.parse(JSON.stringify(value)); }
 export function viewContextKey(context: ViewContext) { return JSON.stringify([context.workspaceSlug, context.projectId, context.viewId]); }
+export function projectMetricsConfiguration(working:ViewConfiguration){
+  const custom_view=projectQueryConfig(working);
+  if(custom_view.version===2&&custom_view.stages?.hidden.length&&!custom_view.count_scopes.includes("filtered"))custom_view.count_scopes=[...custom_view.count_scopes,"filtered"];
+  return {custom_view,rich_filters:working.rich_filters??{},display_filters:{...working.display_filters,sub_issue:working.display_filters.sub_issue??true}};
+}
 export function columnKey(column: TCustomViewPresentationColumn): string {
   return column.kind === "builtin" ? `builtin:${column.key}` : `custom:${column.field_id}`;
 }

@@ -1,9 +1,9 @@
 // Copyright (c) 2023-present Plane Software, Inc. and contributors
 // SPDX-License-Identifier: AGPL-3.0-only
 import { useTranslation } from "@plane/i18n";
-import type { TCustomFieldAggregates, TProjectCustomField } from "@plane/types";
+import type { TCustomFieldAggregates, TProjectCustomField, TCustomMetricScope } from "@plane/types";
 import { formatBRL } from "@/helpers/custom-fields";
-export function PipelineTotals({ response, fields, groupKey }: { response:TCustomFieldAggregates; fields:TProjectCustomField[]; groupKey?:string }) {
+export function PipelineTotals({ response, fields, groupKey,countScopes }: { response:TCustomFieldAggregates; fields:TProjectCustomField[]; groupKey?:string;countScopes?:TCustomMetricScope[] }) {
   const {t}=useTranslation(),key="project_settings.custom_fields.";
   const counts=groupKey===undefined?response.counts?.scopes:response.counts?.groups.find(g=>g.key===groupKey)?.scopes;
   return <div className="flex flex-wrap items-center gap-3 text-11 text-secondary">
@@ -15,7 +15,7 @@ export function PipelineTotals({ response, fields, groupKey }: { response:TCusto
         <span className="ml-1 text-placeholder">({value.item_count}; {t(key+"missing_values")}: {value.missing_count})</span>
       </div>);
     })}
-    {Object.entries(counts??{}).map(([scope,value])=>value&&<div key={scope} data-testid={groupKey===undefined?`pipeline-count-${scope}`:`pipeline-stage-count-${groupKey}-${scope}`}>{t(key+"item_count")} · {t(key+"scope_"+scope)}: <strong>{value.item_count}</strong></div>)}
+    {Object.entries(counts??{}).filter(([scope])=>!countScopes||countScopes.includes(scope as TCustomMetricScope)).map(([scope,value])=>value&&<div key={scope} data-testid={groupKey===undefined?`pipeline-count-${scope}`:`pipeline-stage-count-${groupKey}-${scope}`}>{t(key+"item_count")} · {t(key+"scope_"+scope)}: <strong>{value.item_count}</strong></div>)}
     {response.groups_may_overlap&&groupKey===undefined&&<p role="alert" className="w-full text-placeholder">{t(key+"overlap_warning")}</p>}
   </div>;
 }
